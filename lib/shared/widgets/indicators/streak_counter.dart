@@ -43,7 +43,7 @@ class StreakCounter extends StatelessWidget {
           const SizedBox(height: 4),
           // Label
           Text(
-            streakDays == 1 ? 'day streak' : 'day streak',
+            streakDays == 1 ? 'day streak' : 'day streaks',
             style: isCompact
                 ? AppTypography.bodySmall
                 : AppTypography.bodyDefault.copyWith(

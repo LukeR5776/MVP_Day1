@@ -117,23 +117,23 @@
 
 ## Upcoming 📋
 
-### Phase 4: Journey Gallery (Weeks 8-9)
-- [ ] Grid view of vlog thumbnails
-- [ ] Calendar view with completion markers
-- [ ] Vlog player (full screen)
-- [ ] Share to social platforms
-- [ ] Download to camera roll
-- [ ] Delete vlogs
+### Phase 4: Journey Gallery (Weeks 8-9) ✅
+- [x] Grid view of vlog thumbnails
+- [x] Calendar view with completion markers
+- [x] Vlog player (full screen)
+- [x] Share to social platforms (share card + video via bottom sheet)
+- [x] Download to camera roll
+- [x] Delete vlogs (from player + long-press in gallery)
 
-### Phase 5: Gamification (Weeks 10-11)
-- [ ] UserProgress model
-- [ ] XP calculation + awarding
-- [ ] Level system
-- [ ] Level-up celebration
-- [ ] Streak calculation
-- [ ] Streak milestones + animations
-- [ ] Achievement system (30 achievements)
-- [ ] Achievement unlock notifications
+### Phase 5: Gamification (Weeks 10-11) ✅
+- [x] UserProgress model
+- [x] XP calculation + awarding
+- [x] Level system
+- [x] Level-up celebration
+- [x] Streak calculation
+- [x] Streak milestones + animations
+- [x] Achievement system (30 achievements)
+- [x] Achievement unlock notifications
 
 ### Phase 6: Polish (Weeks 12-14)
 - [ ] Notifications (reminders, streak danger)

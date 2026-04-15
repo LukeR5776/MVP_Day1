@@ -7,6 +7,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/widgets/buttons/primary_button.dart';
 import '../../../../shared/widgets/cards/base_card.dart';
+import '../../data/models/habit.dart';
 import '../../providers/habits_provider.dart';
 
 /// Screen showing habit details and stats
@@ -225,7 +226,7 @@ class HabitDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsGrid(habit) {
+  Widget _buildStatsGrid(Habit habit) {
     return Row(
       children: [
         Expanded(

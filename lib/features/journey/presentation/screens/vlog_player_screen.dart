@@ -1,18 +1,19 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../providers/journey_provider.dart';
 import '../../../recording/data/models/vlog.dart';
+import '../widgets/vlog_share_card.dart';
 
-/// Full-screen video player for compiled vlogs
-/// Plays the single concatenated video (I+E+R combined)
+/// Full-screen video player for compiled vlogs.
+/// Plays the single concatenated video (I+E+R combined).
 class VlogPlayerScreen extends ConsumerStatefulWidget {
   final String vlogId;
 
@@ -30,6 +31,7 @@ class _VlogPlayerScreenState extends ConsumerState<VlogPlayerScreen> {
   bool _isInitialized = false;
   bool _showControls = true;
   bool _isPlaying = false;
+  Timer? _hideControlsTimer;
 
   @override
   void initState() {
@@ -70,8 +72,9 @@ class _VlogPlayerScreenState extends ConsumerState<VlogPlayerScreen> {
           _isInitialized = true;
         });
 
-        // Auto-play
+        // Auto-play and start hide timer
         _controller!.play();
+        _scheduleHideControls();
       }
     } catch (e) {
       debugPrint('❌ Error initializing video: $e');
@@ -94,7 +97,32 @@ class _VlogPlayerScreenState extends ConsumerState<VlogPlayerScreen> {
       setState(() {
         _isPlaying = isPlaying;
       });
+      if (isPlaying) {
+        _scheduleHideControls();
+      } else {
+        _cancelHideTimer();
+        _revealControls();
+      }
     }
+  }
+
+  /// Schedule controls to hide after 3 seconds of playback.
+  void _scheduleHideControls() {
+    _cancelHideTimer();
+    _hideControlsTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && _isPlaying) {
+        setState(() => _showControls = false);
+      }
+    });
+  }
+
+  void _cancelHideTimer() {
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = null;
+  }
+
+  void _revealControls() {
+    setState(() => _showControls = true);
   }
 
   void _togglePlayPause() {
@@ -108,29 +136,29 @@ class _VlogPlayerScreenState extends ConsumerState<VlogPlayerScreen> {
   }
 
   void _toggleControls() {
-    setState(() {
-      _showControls = !_showControls;
-    });
+    if (_showControls) {
+      _cancelHideTimer();
+      setState(() => _showControls = false);
+    } else {
+      _revealControls();
+      if (_isPlaying) _scheduleHideControls();
+    }
   }
 
-  Future<void> _shareVlog(Vlog vlog) async {
-    try {
-      await Share.shareXFiles(
-        [XFile(vlog.videoPath)],
-        text: 'Day ${vlog.dayNumber} - ${vlog.habitName}',
-      );
-      ref.read(vlogOperationsProvider.notifier).markAsShared(vlog.id);
-    } catch (e) {
-      debugPrint('❌ Error sharing vlog: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to share: $e'),
-            backgroundColor: AppColors.streakFire,
-          ),
-        );
-      }
-    }
+  Future<void> _shareVlog(Vlog vlog, Color categoryColor, String categoryEmoji) async {
+    // Pause video while share sheet is open
+    _cancelHideTimer();
+    _controller?.pause();
+
+    await VlogShareBottomSheet.show(
+      context,
+      vlog: vlog,
+      categoryColor: categoryColor,
+      categoryEmoji: categoryEmoji,
+      onMarkShared: () {
+        ref.read(vlogOperationsProvider.notifier).markAsShared(vlog.id);
+      },
+    );
   }
 
   Future<void> _downloadVlog(Vlog vlog) async {
@@ -165,6 +193,9 @@ class _VlogPlayerScreenState extends ConsumerState<VlogPlayerScreen> {
   }
 
   Future<void> _deleteVlog(Vlog vlog) async {
+    _cancelHideTimer();
+    _controller?.pause();
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -217,6 +248,7 @@ class _VlogPlayerScreenState extends ConsumerState<VlogPlayerScreen> {
 
   @override
   void dispose() {
+    _cancelHideTimer();
     _controller?.removeListener(_videoListener);
     _controller?.dispose();
     super.dispose();
@@ -259,6 +291,11 @@ class _VlogPlayerScreenState extends ConsumerState<VlogPlayerScreen> {
       );
     }
 
+    // Look up habit category for theming
+    final journeyState = ref.watch(habitJourneyProvider(vlog.habitId));
+    final categoryColor = journeyState.category.color;
+    final categoryEmoji = journeyState.category.emoji;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
@@ -285,40 +322,44 @@ class _VlogPlayerScreenState extends ConsumerState<VlogPlayerScreen> {
             AnimatedOpacity(
               opacity: _showControls ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 200),
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.4),
-                child: Stack(
-                  children: [
-                    // Top bar
-                    _TopBar(
-                      vlog: vlog,
-                      onClose: () => context.pop(),
-                    ),
-
-                    // Center play/pause button
-                    if (_isInitialized)
-                      Center(
-                        child: _PlayPauseButton(
-                          isPlaying: _isPlaying,
-                          onTap: _togglePlayPause,
-                        ),
+              child: IgnorePointer(
+                ignoring: !_showControls,
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  child: Stack(
+                    children: [
+                      // Top bar
+                      _TopBar(
+                        vlog: vlog,
+                        categoryColor: categoryColor,
+                        onClose: () => context.pop(),
                       ),
 
-                    // Bottom controls
-                    if (_isInitialized)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: _BottomControls(
-                          controller: _controller!,
-                          vlog: vlog,
-                          onShare: () => _shareVlog(vlog),
-                          onDownload: () => _downloadVlog(vlog),
-                          onDelete: () => _deleteVlog(vlog),
+                      // Center play/pause button
+                      if (_isInitialized)
+                        Center(
+                          child: _PlayPauseButton(
+                            isPlaying: _isPlaying,
+                            onTap: _togglePlayPause,
+                          ),
                         ),
-                      ),
-                  ],
+
+                      // Bottom controls
+                      if (_isInitialized)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: _BottomControls(
+                            controller: _controller!,
+                            vlog: vlog,
+                            onShare: () => _shareVlog(vlog, categoryColor, categoryEmoji),
+                            onDownload: () => _downloadVlog(vlog),
+                            onDelete: () => _deleteVlog(vlog),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -329,13 +370,15 @@ class _VlogPlayerScreenState extends ConsumerState<VlogPlayerScreen> {
   }
 }
 
-/// Top bar with close button and vlog info
+/// Top bar with close button and vlog info.
 class _TopBar extends StatelessWidget {
   final Vlog vlog;
+  final Color categoryColor;
   final VoidCallback onClose;
 
   const _TopBar({
     required this.vlog,
+    required this.categoryColor,
     required this.onClose,
   });
 
@@ -381,13 +424,13 @@ class _TopBar extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.2),
+                    color: categoryColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     'Day ${vlog.dayNumber}',
                     style: AppTypography.caption.copyWith(
-                      color: AppColors.primary,
+                      color: categoryColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -404,7 +447,7 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-/// Play/pause button in center
+/// Play/pause button in center.
 class _PlayPauseButton extends StatelessWidget {
   final bool isPlaying;
   final VoidCallback onTap;
@@ -435,7 +478,7 @@ class _PlayPauseButton extends StatelessWidget {
   }
 }
 
-/// Bottom controls with progress and actions
+/// Bottom controls with progress and actions.
 class _BottomControls extends StatefulWidget {
   final VideoPlayerController controller;
   final Vlog vlog;
@@ -570,7 +613,7 @@ class _BottomControlsState extends State<_BottomControls> {
   }
 }
 
-/// Action button for bottom controls
+/// Action button for bottom controls.
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;

@@ -46,27 +46,20 @@ class XPBar extends StatelessWidget {
           child: Container(
             height: height,
             width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.backgroundSurface,
-            ),
-            child: Stack(
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 500),
-                  curve: Curves.easeOut,
-                  width: MediaQuery.of(context).size.width * progress,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.xpGold,
-                        AppColors.warning,
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
+            color: AppColors.backgroundSurface,
+            child: LayoutBuilder(
+              builder: (context, constraints) => AnimatedContainer(
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeOut,
+                width: constraints.maxWidth * progress,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.xpGold, AppColors.warning],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),

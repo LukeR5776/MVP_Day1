@@ -15,6 +15,11 @@ import '../widgets/day_overlay.dart';
 import '../widgets/record_button.dart';
 import '../widgets/clip_type_selector.dart';
 import '../widgets/compilation_progress_dialog.dart';
+import '../../../habits/providers/habits_provider.dart';
+import '../../../gamification/providers/gamification_provider.dart';
+import '../../../gamification/presentation/widgets/xp_reward_popup.dart';
+import '../../../gamification/presentation/widgets/level_up_overlay.dart';
+import '../../../gamification/presentation/widgets/achievement_toast.dart';
 
 /// Main camera recording screen
 class CameraScreen extends ConsumerStatefulWidget {
@@ -79,12 +84,18 @@ class _CameraScreenState extends ConsumerState<CameraScreen>
   }
 
   Future<void> _initializeSession() async {
-    // Initialize the recording session
-    ref.read(recordingSessionProvider.notifier).initSession(
-          habitId: widget.habitId,
-          habitName: widget.habitName,
-          dayNumber: widget.dayNumber,
-        );
+    // Initialize the recording session.
+    // Wrapped in try-catch: if the session notifier fails for any reason,
+    // we still want the camera to initialize so the screen doesn't get stuck.
+    try {
+      ref.read(recordingSessionProvider.notifier).initSession(
+            habitId: widget.habitId,
+            habitName: widget.habitName,
+            dayNumber: widget.dayNumber,
+          );
+    } catch (e) {
+      debugPrint('❌ Session init error: $e');
+    }
 
     // Request permissions (shows native dialog if needed)
     final granted = await ref.read(cameraPermissionProvider.notifier).requestPermission();
@@ -328,12 +339,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen>
     // Ensure camera is still initialized after saving
     if (mounted && cameraWasInitialized) {
       final stillInitialized = _cameraController?.value.isInitialized ?? false;
-      if (!stillInitialized) {
+      if (!stillInitialized && !_isInitializing) {
+        // Only re-init if no initialization is already in flight
         debugPrint('🎥 Camera broke after save, re-initializing...');
-        _isInitializing = false; // Reset flag to allow re-init
         await _initializeCamera();
       } else {
-        debugPrint('🎥 Camera survived save, ready for next clip!');
+        debugPrint('🎥 Camera survived save (or re-init already running), ready for next clip!');
       }
     }
 
@@ -353,10 +364,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen>
     // Track whether we showed the dialog (so we know to dismiss it)
     bool dialogShown = false;
 
-    try {
-      // Create a stream controller for progress updates
-      final progressController = StreamController<CompilationProgress>();
+    // Declare outside try so it's accessible in catch for cleanup
+    final progressController = StreamController<CompilationProgress>();
 
+    try {
       // Show compilation dialog
       showCompilationDialog(
         context: context,
@@ -399,12 +410,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen>
         ref.invalidate(habitLogsProvider(widget.habitId));
       }
 
-      // Show completion dialog
+      // Award XP and show gamification rewards
       if (mounted) {
-        _showCompletionDialog();
+        await _awardAndCelebrate();
       }
     } catch (e) {
       debugPrint('❌ Compilation error: $e');
+
+      // Close the stream controller to prevent resource leak
+      try { await progressController.close(); } catch (_) {}
 
       // Dismiss dialog on error too
       if (mounted && dialogShown) {
@@ -426,50 +440,88 @@ class _CameraScreenState extends ConsumerState<CameraScreen>
     ref.read(recordingSessionProvider.notifier).discardRecording();
   }
 
-  void _showCompletionDialog() {
-    showDialog(
+  Future<void> _awardAndCelebrate() async {
+    // Gather inputs for XP calculation
+    final recordingState = ref.read(recordingRepositoryProvider);
+    final habit = ref.read(habitByIdProvider(widget.habitId));
+    if (habit == null || !mounted) return;
+
+    final totalVlogs = recordingState.vlogs.length;
+    final totalSeconds = recordingState.vlogs.values
+        .fold<int>(0, (sum, v) => sum + v.durationSeconds);
+
+    // Award XP (also updates streak + day number on the habit)
+    final result = await ref
+        .read(gamificationProvider.notifier)
+        .awardXpForCompletion(
+          habit: habit,
+          totalVlogCount: totalVlogs,
+          totalSeconds: totalSeconds,
+          recordingState: recordingState,
+        );
+
+    if (!mounted) return;
+    final updatedProgress = ref.read(gamificationProvider);
+
+    // 1. Enhanced completion dialog (with XP popup)
+    await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.backgroundCard,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              '🎉',
-              style: TextStyle(fontSize: 64),
-            )
-                .animate()
-                .scale(duration: 400.ms, curve: Curves.elasticOut),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'All clips recorded!',
-              style: AppTypography.h2.copyWith(color: AppColors.textPrimary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Day ${widget.dayNumber} is complete.\nYour vlog is ready to compile!',
-              style: AppTypography.bodyDefault.copyWith(
-                color: AppColors.textSecondary,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '🎉',
+                style: TextStyle(fontSize: 64),
+              ).animate().scale(duration: 400.ms, curve: Curves.elasticOut),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Day ${widget.dayNumber} complete!',
+                style: AppTypography.h2.copyWith(color: AppColors.textPrimary),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            PrimaryButton(
-              text: 'Done',
-              onPressed: () {
-                Navigator.pop(context);
-                context.pop();
-              },
-            ),
-          ],
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Your vlog has been compiled.',
+                style: AppTypography.bodyDefault.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              XpRewardPopup(
+                result: result,
+                updatedProgress: updatedProgress,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              PrimaryButton(
+                text: 'Done',
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ],
+          ),
         ),
       ),
     );
+
+    // 2. Level-up overlay (if applicable)
+    if (mounted && result.newLevel != null) {
+      await LevelUpOverlay.show(context, level: result.newLevel!);
+    }
+
+    // 3. Achievement toasts (sequential)
+    for (final achievement in result.unlockedAchievements) {
+      if (!mounted) break;
+      await AchievementToast.show(context, achievement);
+    }
+
+    // 4. Navigate back to previous screen
+    if (mounted) context.pop();
   }
 
   String _formatDuration(int seconds) {
@@ -485,11 +537,25 @@ class _CameraScreenState extends ConsumerState<CameraScreen>
     final isInitialized = _cameraController?.value.isInitialized ?? false;
     final isRecording = session.isRecording;
 
-    // Self-healing: If permission is granted but camera is null, auto-initialize
-    if (permissionStatus.isGranted && _cameraController == null && !_isInitializing) {
-      debugPrint('🎥 Permission granted but no camera, auto-initializing...');
-      Future.microtask(() => _initializeCamera());
-    }
+    // Self-healing: re-initialize camera when permission is granted but camera is null
+    ref.listen<PermissionStatus>(cameraPermissionProvider, (prev, next) {
+      if (next.isGranted && _cameraController == null && !_isInitializing) {
+        debugPrint('🎥 Permission granted but no camera, auto-initializing...');
+        _initializeCamera();
+      }
+    });
+
+    // Show a SnackBar when a save or init error occurs
+    ref.listen<RecordingSessionState>(recordingSessionProvider, (prev, next) {
+      if (next.error != null && next.error != prev?.error && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: AppColors.streakFire,
+          ),
+        );
+      }
+    });
 
     return Scaffold(
       backgroundColor: Colors.black,

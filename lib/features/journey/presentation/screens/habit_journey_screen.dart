@@ -5,9 +5,104 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../providers/journey_provider.dart';
+import '../../../habits/data/models/habit_enums.dart';
 import '../../../recording/data/models/vlog.dart';
+import '../utils/journey_date_utils.dart';
 import '../widgets/vlog_thumbnail.dart';
 import '../widgets/journey_calendar.dart';
+
+/// Shows a delete confirmation bottom sheet and deletes the vlog on confirm.
+Future<void> _confirmDelete(
+  BuildContext context,
+  WidgetRef ref,
+  Vlog vlog,
+) async {
+  final confirmed = await showModalBottomSheet<bool>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => Container(
+      decoration: const BoxDecoration(
+        color: AppColors.backgroundCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenHorizontal,
+        AppSpacing.md,
+        AppSpacing.screenHorizontal,
+        AppSpacing.lg,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.borderDefault,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            const Icon(
+              Icons.delete_outline_rounded,
+              color: AppColors.streakFire,
+              size: 40,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Delete Vlog?',
+              style: AppTypography.h3.copyWith(color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Day ${vlog.dayNumber} — ${vlog.habitName}\nThis cannot be undone.',
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.streakFire,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text(
+                  'Delete',
+                  style: AppTypography.buttonText.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(
+                'Cancel',
+                style: AppTypography.buttonText.copyWith(
+                  color: AppColors.textTertiary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  if (confirmed == true) {
+    await ref.read(vlogOperationsProvider.notifier).deleteVlog(vlog.id);
+  }
+}
 
 /// Screen showing journey for a specific habit
 class HabitJourneyScreen extends ConsumerWidget {
@@ -75,7 +170,7 @@ class HabitJourneyScreen extends ConsumerWidget {
               child: _EmptyJourneyState(),
             )
           else
-            _buildContent(context, journeyState, viewMode),
+            _buildContent(context, ref, journeyState, viewMode),
         ],
       ),
     );
@@ -101,20 +196,21 @@ class HabitJourneyScreen extends ConsumerWidget {
 
   Widget _buildContent(
     BuildContext context,
+    WidgetRef ref,
     HabitJourneyState journeyState,
     JourneyViewMode viewMode,
   ) {
     switch (viewMode) {
       case JourneyViewMode.grid:
-        return _buildGridView(context, journeyState);
+        return _buildGridView(context, ref, journeyState);
       case JourneyViewMode.calendar:
         return _buildCalendarView(context, journeyState);
       case JourneyViewMode.timeline:
-        return _buildTimelineView(context, journeyState);
+        return _buildTimelineView(context, ref, journeyState);
     }
   }
 
-  Widget _buildGridView(BuildContext context, HabitJourneyState journeyState) {
+  Widget _buildGridView(BuildContext context, WidgetRef ref, HabitJourneyState journeyState) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.screenHorizontal,
@@ -132,6 +228,7 @@ class HabitJourneyScreen extends ConsumerWidget {
             return VlogThumbnail(
               vlog: vlog,
               onTap: () => _navigateToPlayer(context, vlog),
+              onLongPress: () => _confirmDelete(context, ref, vlog),
             );
           },
           childCount: journeyState.vlogs.length,
@@ -174,10 +271,9 @@ class HabitJourneyScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTimelineView(BuildContext context, HabitJourneyState journeyState) {
-    // Sort vlogs by date (newest first)
-    final sortedVlogs = List<Vlog>.from(journeyState.vlogs)
-      ..sort((a, b) => b.date.compareTo(a.date));
+  Widget _buildTimelineView(BuildContext context, WidgetRef ref, HabitJourneyState journeyState) {
+    // habitVlogsProvider already returns vlogs sorted by date (newest first)
+    final sortedVlogs = journeyState.vlogs;
 
     return SliverPadding(
       padding: const EdgeInsets.symmetric(
@@ -188,7 +284,7 @@ class HabitJourneyScreen extends ConsumerWidget {
           (context, index) {
             final vlog = sortedVlogs[index];
             final showDateHeader = index == 0 ||
-                !_isSameDay(sortedVlogs[index - 1].date, vlog.date);
+                !isSameDay(sortedVlogs[index - 1].date, vlog.date);
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +292,7 @@ class HabitJourneyScreen extends ConsumerWidget {
                 if (showDateHeader) ...[
                   if (index > 0) const SizedBox(height: AppSpacing.lg),
                   Text(
-                    _formatDateHeader(vlog.date),
+                    formatDateHeader(vlog.date),
                     style: AppTypography.caption.copyWith(
                       color: AppColors.textTertiary,
                     ),
@@ -206,6 +302,7 @@ class HabitJourneyScreen extends ConsumerWidget {
                 VlogThumbnailLarge(
                   vlog: vlog,
                   onTap: () => _navigateToPlayer(context, vlog),
+                  onLongPress: () => _confirmDelete(context, ref, vlog),
                 ),
                 const SizedBox(height: AppSpacing.md),
               ],
@@ -215,28 +312,6 @@ class HabitJourneyScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-
-  String _formatDateHeader(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final dateOnly = DateTime(date.year, date.month, date.day);
-
-    if (dateOnly == today) {
-      return 'Today';
-    } else if (dateOnly == today.subtract(const Duration(days: 1))) {
-      return 'Yesterday';
-    } else {
-      const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ];
-      return '${months[date.month - 1]} ${date.day}, ${date.year}';
-    }
   }
 
   void _navigateToPlayer(BuildContext context, Vlog vlog) {
@@ -275,7 +350,7 @@ class _BackButton extends StatelessWidget {
 class _HeroHeader extends StatelessWidget {
   final String habitName;
   final int completedDays;
-  final dynamic category; // HabitCategory
+  final HabitCategory category;
   final int currentStreak;
 
   const _HeroHeader({

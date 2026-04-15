@@ -117,7 +117,9 @@ class RecordingSessionState {
 }
 
 /// Notifier for recording session state
-final recordingSessionProvider = StateNotifierProvider<RecordingSessionNotifier, RecordingSessionState>((ref) {
+/// autoDispose ensures each camera session gets a fresh notifier —
+/// prevents "StateNotifier used after dispose" errors on re-entry.
+final recordingSessionProvider = StateNotifierProvider.autoDispose<RecordingSessionNotifier, RecordingSessionState>((ref) {
   final repository = ref.read(recordingRepositoryProvider.notifier);
   return RecordingSessionNotifier(repository);
 });

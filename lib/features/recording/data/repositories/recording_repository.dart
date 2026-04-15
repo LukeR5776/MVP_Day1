@@ -263,18 +263,20 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
     final tempFile = File(tempPath);
     await tempFile.copy(permanentPath);
 
-    // Save to photo library - must await to ensure it completes before function returns
-    try {
-      final result = await ImageGallerySaver.saveFile(
-        permanentPath,
-        isReturnPathOfIOS: true,
-        name: fileName,
-      );
+    // Save to photo library in the background — do NOT await.
+    // Awaiting triggers the iOS PHPhotoLibrary permission dialog which puts the
+    // app into AppLifecycleState.inactive mid-save, disposing the camera
+    // controller and causing a race condition in the recording flow.
+    // The clip is already safely in app storage; the gallery copy is optional.
+    ImageGallerySaver.saveFile(
+      permanentPath,
+      isReturnPathOfIOS: true,
+      name: fileName,
+    ).then((result) {
       debugPrint('✅ Clip saved to photo library: $result');
-    } catch (e) {
+    }).catchError((Object e) {
       debugPrint('⚠️ Could not save to photo library: $e');
-      // Don't rethrow - clip is already saved to app storage
-    }
+    });
 
     // Delete temp file
     try {

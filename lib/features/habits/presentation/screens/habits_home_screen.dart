@@ -13,6 +13,7 @@ import '../widgets/habit_card.dart';
 import '../widgets/empty_habits_state.dart';
 import '../../../recording/providers/recording_provider.dart';
 import '../../../recording/data/models/daily_log.dart';
+import '../../../gamification/providers/gamification_provider.dart';
 
 class HabitsHomeScreen extends ConsumerWidget {
   const HabitsHomeScreen({super.key});
@@ -85,7 +86,7 @@ class HabitsHomeScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.md),
 
               // Streak and XP Section
-              _buildStatsCard(context, totalStreak)
+              _buildStatsCard(context, ref, totalStreak)
                   .animate()
                   .fadeIn(duration: 400.ms)
                   .slideY(begin: 0.1, end: 0),
@@ -155,7 +156,8 @@ class HabitsHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsCard(BuildContext context, int totalStreak) {
+  Widget _buildStatsCard(BuildContext context, WidgetRef ref, int totalStreak) {
+    final progress = ref.watch(gamificationProvider);
     return BaseCard(
       child: Column(
         children: [
@@ -226,7 +228,7 @@ class HabitsHomeScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Level 1',
+                            'Level ${progress.level}',
                             style: AppTypography.h4.copyWith(
                               color: AppColors.textPrimary,
                             ),
@@ -234,13 +236,13 @@ class HabitsHomeScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      const XPBar(
-                        currentXP: 0,
-                        maxXP: 100,
+                      XPBar(
+                        currentXP: progress.xpProgressInCurrentLevel,
+                        maxXP: progress.xpNeededForNextLevel,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '0 / 100 XP',
+                        '${progress.xpProgressInCurrentLevel} / ${progress.xpNeededForNextLevel} XP',
                         style: AppTypography.caption.copyWith(
                           color: AppColors.textTertiary,
                         ),

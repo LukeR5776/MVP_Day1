@@ -4,10 +4,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../recording/data/models/vlog.dart';
 
-/// Thumbnail card for displaying a vlog in the gallery grid
-class VlogThumbnail extends StatelessWidget {
+/// Thumbnail card for displaying a vlog in the gallery grid.
+class VlogThumbnail extends StatefulWidget {
   final Vlog vlog;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final bool showDayLabel;
   final bool showDuration;
 
@@ -15,57 +16,73 @@ class VlogThumbnail extends StatelessWidget {
     super.key,
     required this.vlog,
     required this.onTap,
+    this.onLongPress,
     this.showDayLabel = true,
     this.showDuration = true,
   });
 
   @override
+  State<VlogThumbnail> createState() => _VlogThumbnailState();
+}
+
+class _VlogThumbnailState extends State<VlogThumbnail> {
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.backgroundCard,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.borderSubtle,
-            width: 1,
+      onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.94 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.backgroundCard,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.borderSubtle,
+              width: 1,
+            ),
           ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Thumbnail image or placeholder
-            _buildThumbnail(),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Thumbnail image or placeholder
+              _buildThumbnail(),
 
-            // Play button overlay
-            _buildPlayButton(),
+              // Play button overlay
+              _buildPlayButton(),
 
-            // Day label (bottom left)
-            if (showDayLabel)
-              Positioned(
-                left: 6,
-                bottom: 6,
-                child: _buildDayLabel(),
-              ),
+              // Day label (bottom left)
+              if (widget.showDayLabel)
+                Positioned(
+                  left: 6,
+                  bottom: 6,
+                  child: _buildDayLabel(),
+                ),
 
-            // Duration badge (bottom right)
-            if (showDuration)
-              Positioned(
-                right: 6,
-                bottom: 6,
-                child: _buildDurationBadge(),
-              ),
-          ],
+              // Duration badge (bottom right)
+              if (widget.showDuration)
+                Positioned(
+                  right: 6,
+                  bottom: 6,
+                  child: _buildDurationBadge(),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildThumbnail() {
-    if (vlog.thumbnailPath != null) {
-      final file = File(vlog.thumbnailPath!);
+    if (widget.vlog.thumbnailPath != null) {
+      final file = File(widget.vlog.thumbnailPath!);
       return FutureBuilder<bool>(
         future: file.exists(),
         builder: (context, snapshot) {
@@ -122,7 +139,7 @@ class VlogThumbnail extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        'Day ${vlog.dayNumber}',
+        'Day ${widget.vlog.dayNumber}',
         style: AppTypography.caption.copyWith(
           color: AppColors.textPrimary,
           fontWeight: FontWeight.w600,
@@ -140,7 +157,7 @@ class VlogThumbnail extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        vlog.formattedDuration,
+        widget.vlog.formattedDuration,
         style: AppTypography.caption.copyWith(
           color: AppColors.textPrimary,
           fontSize: 9,
@@ -150,132 +167,149 @@ class VlogThumbnail extends StatelessWidget {
   }
 }
 
-/// Larger thumbnail variant for featured/hero display
-class VlogThumbnailLarge extends StatelessWidget {
+/// Larger thumbnail variant for featured/hero display.
+class VlogThumbnailLarge extends StatefulWidget {
   final Vlog vlog;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final String? habitName;
 
   const VlogThumbnailLarge({
     super.key,
     required this.vlog,
     required this.onTap,
+    this.onLongPress,
     this.habitName,
   });
 
   @override
+  State<VlogThumbnailLarge> createState() => _VlogThumbnailLargeState();
+}
+
+class _VlogThumbnailLargeState extends State<VlogThumbnailLarge> {
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 180,
-        decoration: BoxDecoration(
-          color: AppColors.backgroundCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppColors.borderSubtle,
-            width: 1,
+      onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          height: 180,
+          decoration: BoxDecoration(
+            color: AppColors.backgroundCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.borderSubtle,
+              width: 1,
+            ),
           ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Thumbnail
-            _buildThumbnail(),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Thumbnail
+              _buildThumbnail(),
 
-            // Gradient overlay at bottom
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: 80,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.8),
-                    ],
+              // Gradient overlay at bottom
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 80,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.8),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            // Play button
-            Center(
-              child: Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundPrimary.withValues(alpha: 0.75),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.play_arrow_rounded,
-                  color: AppColors.textPrimary,
-                  size: 32,
+              // Play button
+              Center(
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundPrimary.withValues(alpha: 0.75),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow_rounded,
+                    color: AppColors.textPrimary,
+                    size: 32,
+                  ),
                 ),
               ),
-            ),
 
-            // Info at bottom
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 12,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (habitName != null)
+              // Info at bottom
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 12,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.habitName != null)
+                          Text(
+                            widget.habitName!,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                         Text(
-                          habitName!,
-                          style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
+                          'Day ${widget.vlog.dayNumber}',
+                          style: AppTypography.h4.copyWith(
+                            color: AppColors.textPrimary,
                           ),
                         ),
-                      Text(
-                        'Day ${vlog.dayNumber}',
-                        style: AppTypography.h4.copyWith(
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundSurface,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        widget.vlog.formattedDuration,
+                        style: AppTypography.caption.copyWith(
                           color: AppColors.textPrimary,
                         ),
                       ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
                     ),
-                    decoration: BoxDecoration(
-                      color: AppColors.backgroundSurface,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      vlog.formattedDuration,
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildThumbnail() {
-    if (vlog.thumbnailPath != null) {
-      final file = File(vlog.thumbnailPath!);
+    if (widget.vlog.thumbnailPath != null) {
+      final file = File(widget.vlog.thumbnailPath!);
       return FutureBuilder<bool>(
         future: file.exists(),
         builder: (context, snapshot) {
