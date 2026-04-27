@@ -6,6 +6,7 @@ import '../../features/habits/presentation/screens/habit_detail_screen.dart';
 import '../../features/journey/presentation/screens/journey_screen.dart';
 import '../../features/journey/presentation/screens/habit_journey_screen.dart';
 import '../../features/journey/presentation/screens/vlog_player_screen.dart';
+import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/recording/presentation/screens/record_screen.dart';
 import '../../features/recording/presentation/screens/camera_screen.dart';
 import '../../features/gamification/presentation/screens/stats_screen.dart';
@@ -17,10 +18,23 @@ class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
   static final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+  /// Set by main() before the router is first accessed.
+  static bool onboardingComplete = false;
+
   static final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/home',
+    initialLocation: onboardingComplete ? '/home' : '/onboarding',
     routes: [
+      // Onboarding — full screen, no bottom nav
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => OnboardingScreen(
+          onComplete: () => context.go('/home'),
+        ),
+      ),
+
       // Shell route with bottom navigation
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
