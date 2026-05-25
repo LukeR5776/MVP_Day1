@@ -11,18 +11,38 @@ import '../../../gamification/providers/gamification_provider.dart';
 import '../../../gamification/data/models/achievement.dart';
 import '../../../gamification/presentation/widgets/achievement_card.dart';
 import '../../../habits/providers/habits_provider.dart';
+import '../../../auth/providers/auth_provider.dart';
+import '../../../recording/providers/recording_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
+
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    await ref.read(authServiceProvider).signOut();
+    ref.invalidate(habitsProvider);
+    ref.invalidate(gamificationProvider);
+    ref.invalidate(recordingRepositoryProvider);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(gamificationProvider);
     final habits = ref.watch(habitsProvider);
+    final profile = ref.watch(profileProvider);
 
     final bestStreak = habits.isEmpty
         ? 0
         : habits.map((h) => h.bestStreak).reduce((a, b) => a > b ? a : b);
+
+    // When loading, return null so we keep the previous value visible (no flash).
+    final displayName = profile.when(
+      data: (p) => (p?['name'] as String?)?.trim() ?? '',
+      loading: () => null,
+      error: (_, __) => '',
+    );
+    final userName = (displayName != null && displayName.isNotEmpty)
+        ? displayName
+        : 'Day1 Athlete';
 
     // Get last 3 unlocked achievements
     final recentAchievements = progress.unlockedAchievementIds
@@ -41,7 +61,7 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Hero section
-            _HeroSection(progress: progress)
+            _HeroSection(progress: progress, userName: userName)
                 .animate()
                 .fadeIn(duration: 500.ms)
                 .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1)),
@@ -77,6 +97,20 @@ class ProfileScreen extends ConsumerWidget {
                   .fadeIn(duration: 400.ms, delay: 300.ms),
             ],
 
+            const SizedBox(height: AppSpacing.lg),
+
+            // Sign out
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: TextButton(
+                onPressed: () => _signOut(context, ref),
+                child: const Text(
+                  'Sign Out',
+                  style: TextStyle(color: Color(0xFFEF4444), fontSize: 15),
+                ),
+              ),
+            ),
+
             const SizedBox(height: AppSpacing.bottomNavClearance),
           ],
         ),
@@ -89,8 +123,9 @@ class ProfileScreen extends ConsumerWidget {
 
 class _HeroSection extends StatelessWidget {
   final dynamic progress; // UserProgress
+  final String userName;
 
-  const _HeroSection({required this.progress});
+  const _HeroSection({required this.progress, required this.userName});
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +165,7 @@ class _HeroSection extends StatelessWidget {
 
         // Username
         Text(
-          'Day1 Athlete',
+          userName,
           style: AppTypography.h2.copyWith(color: AppColors.textPrimary),
         ),
         const SizedBox(height: 4),

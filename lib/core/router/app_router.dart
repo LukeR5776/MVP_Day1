@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/signup_screen.dart';
+import '../../features/auth/providers/auth_provider.dart';
 import '../../features/habits/presentation/screens/habits_home_screen.dart';
 import '../../features/habits/presentation/screens/create_habit_screen.dart';
 import '../../features/habits/presentation/screens/habit_detail_screen.dart';
@@ -13,26 +18,61 @@ import '../../features/gamification/presentation/screens/stats_screen.dart';
 import '../../features/settings/presentation/screens/profile_screen.dart';
 import '../../shared/widgets/layout/app_bottom_nav.dart';
 import '../theme/app_colors.dart';
+import 'go_router_refresh_stream.dart';
 
-class AppRouter {
-  static final _rootNavigatorKey = GlobalKey<NavigatorState>();
-  static final _shellNavigatorKey = GlobalKey<NavigatorState>();
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
-  /// Set by main() before the router is first accessed.
-  static bool onboardingComplete = false;
-
-  static final router = GoRouter(
+final appRouterProvider = Provider<GoRouter>((ref) {
+  // GoRouter is created once and never recreated on auth changes.
+  // The refreshListenable fires when auth state changes, causing GoRouter to
+  // re-evaluate redirect. We read current auth state inside the callback
+  // (not from a closure) so it always reflects the latest session.
+  return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: onboardingComplete ? '/home' : '/onboarding',
+    initialLocation: '/home',
+    refreshListenable: GoRouterRefreshStream(
+      Supabase.instance.client.auth.onAuthStateChange,
+    ),
+    redirect: (context, state) {
+      final isLoggedIn = Supabase.instance.client.auth.currentUser != null;
+      final onboardingComplete = ref.read(onboardingCompleteProvider);
+      final location = state.matchedLocation;
+      final authPages = {'/login', '/signup', '/onboarding'};
+
+      if (!isLoggedIn && !onboardingComplete) {
+        if (!authPages.contains(location)) return '/onboarding';
+        return null;
+      }
+
+      if (!isLoggedIn && onboardingComplete) {
+        if (location != '/login' && location != '/signup') return '/login';
+        return null;
+      }
+
+      // Logged in — bounce away from auth screens
+      if (authPages.contains(location)) return '/home';
+
+      return null;
+    },
     routes: [
-      // Onboarding — full screen, no bottom nav
       GoRoute(
         path: '/onboarding',
         name: 'onboarding',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => OnboardingScreen(
-          onComplete: () => context.go('/home'),
-        ),
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/login',
+        name: 'login',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/signup',
+        name: 'signup',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SignUpScreen(),
       ),
 
       // Shell route with bottom navigation
@@ -69,6 +109,7 @@ class AppRouter {
           ),
         ],
       ),
+
       // Full-screen routes (no bottom nav)
       GoRoute(
         path: '/create-habit',
@@ -100,7 +141,6 @@ class AppRouter {
           );
         },
       ),
-      // Habit-specific journey screen
       GoRoute(
         path: '/habit/:id/journey',
         name: 'habitJourney',
@@ -110,7 +150,6 @@ class AppRouter {
           return HabitJourneyScreen(habitId: habitId);
         },
       ),
-      // Vlog player screen
       GoRoute(
         path: '/vlog/:id',
         name: 'vlogPlayer',
@@ -122,4 +161,4 @@ class AppRouter {
       ),
     ],
   );
-}
+});

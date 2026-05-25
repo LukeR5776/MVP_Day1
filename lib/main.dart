@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
-import 'core/router/app_router.dart';
+import 'core/config/supabase_config.dart';
 import 'core/theme/app_colors.dart';
+import 'features/auth/providers/auth_provider.dart';
 import 'features/onboarding/data/repositories/onboarding_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Check if onboarding has been completed before building the router
-  AppRouter.onboardingComplete = await OnboardingRepository().isComplete();
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey,
+  );
 
-  // Set system UI overlay style
+  // Track whether the user has completed the onboarding flow locally.
+  // Used to distinguish "never seen onboarding" from "seen but not logged in".
+  final onboardingComplete = await OnboardingRepository().isComplete();
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -22,15 +29,17 @@ void main() async {
     ),
   );
 
-  // Lock orientation to portrait
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
   runApp(
-    const ProviderScope(
-      child: Day1App(),
+    ProviderScope(
+      overrides: [
+        onboardingCompleteProvider.overrideWith((ref) => onboardingComplete),
+      ],
+      child: const Day1App(),
     ),
   );
 }

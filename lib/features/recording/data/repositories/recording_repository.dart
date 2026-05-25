@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import '../models/daily_log.dart';
@@ -10,6 +12,7 @@ import '../models/video_clip.dart';
 import '../models/clip_type.dart';
 import '../models/vlog.dart';
 import '../services/compilation_service.dart';
+import 'supabase_recording_repository.dart';
 
 /// State container for RecordingRepository
 class RecordingRepositoryState {
@@ -44,16 +47,41 @@ class RecordingRepositoryState {
 /// - StateNotifier pattern ensures UI updates when state changes
 class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
   final CompilationService _compilationService = CompilationService();
+  final SupabaseRecordingRepository _supabaseRepo = SupabaseRecordingRepository();
+  late final StreamSubscription<AuthState> _authSub;
 
   RecordingRepository() : super(const RecordingRepositoryState()) {
     initialize();
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+      if (event.event == AuthChangeEvent.signedOut) {
+        state = const RecordingRepositoryState();
+      } else if (event.event == AuthChangeEvent.signedIn ||
+          event.event == AuthChangeEvent.tokenRefreshed) {
+        initialize();
+      }
+    });
   }
 
-  /// Initialize the repository - loads persisted vlogs from disk
+  @override
+  void dispose() {
+    _authSub.cancel();
+    super.dispose();
+  }
+
+  String? get _userId => Supabase.instance.client.auth.currentUser?.id;
+
+  /// Initialize the repository - loads persisted vlogs from disk.
+  /// Supabase merge only runs when there are no local vlogs (fresh install /
+  /// new device) to avoid flooding the gallery with stale "Other device" cards.
   Future<void> initialize() async {
     if (state.isInitialized) return;
+    // Require a signed-in user — avoids loading another user's files.
+    if (_userId == null) return;
 
     await _loadVlogsFromDisk();
+    if (state.vlogs.isEmpty) {
+      await _mergeSupabaseVlogs();
+    }
     state = state.copyWith(isInitialized: true);
     debugPrint('📦 RecordingRepository initialized with ${state.vlogs.length} vlogs');
   }
@@ -67,9 +95,11 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
 
   /// Save vlogs index to disk for persistence
   Future<void> _saveVlogsIndex() async {
+    final userId = _userId;
+    if (userId == null) return;
     try {
       final appDir = await getApplicationDocumentsDirectory();
-      final indexFile = File('${appDir.path}/vlogs_index.json');
+      final indexFile = File('${appDir.path}/vlogs_index_$userId.json');
       final vlogsList = state.vlogs.values.map((v) => v.toJson()).toList();
       await indexFile.writeAsString(jsonEncode(vlogsList));
       debugPrint('💾 Saved ${vlogsList.length} vlogs to index');
@@ -80,9 +110,11 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
 
   /// Load vlogs from disk on initialization
   Future<void> _loadVlogsFromDisk() async {
+    final userId = _userId;
+    if (userId == null) return;
     try {
       final appDir = await getApplicationDocumentsDirectory();
-      final indexFile = File('${appDir.path}/vlogs_index.json');
+      final indexFile = File('${appDir.path}/vlogs_index_$userId.json');
 
       if (!await indexFile.exists()) {
         debugPrint('📂 No vlogs index found, starting fresh');
@@ -99,13 +131,16 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
       for (final json in vlogsList) {
         try {
           final vlog = Vlog.fromJson(json as Map<String, dynamic>);
-          // Verify video file still exists before adding to memory
-          if (await File(vlog.videoPath).exists()) {
+          final exists =
+              vlog.videoPath.isNotEmpty && await File(vlog.videoPath).exists();
+          if (exists) {
             loadedVlogs[vlog.id] = vlog;
             loadedCount++;
           } else {
+            // Keep the entry but mark video as unavailable on this device
+            loadedVlogs[vlog.id] = vlog.copyWith(isAvailableLocally: false);
             skippedCount++;
-            debugPrint('⚠️ Skipped vlog ${vlog.id} - video file missing');
+            debugPrint('⚠️ Vlog ${vlog.id} video missing — marked unavailable');
           }
         } catch (e) {
           debugPrint('⚠️ Error parsing vlog: $e');
@@ -113,17 +148,34 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
         }
       }
 
-      debugPrint('📂 Loaded $loadedCount vlogs from disk ($skippedCount skipped)');
+      debugPrint('📂 Loaded $loadedCount vlogs from disk ($skippedCount unavailable)');
 
       // Update state with loaded vlogs
       state = state.copyWith(vlogs: loadedVlogs);
-
-      // If we skipped any, save the cleaned index
-      if (skippedCount > 0) {
-        await _saveVlogsIndex();
-      }
     } catch (e) {
       debugPrint('❌ Error loading vlogs from disk: $e');
+    }
+  }
+
+  /// Fetch vlog metadata from Supabase and add any records not already loaded locally.
+  /// Local records win (they have real file paths). Remote-only records are added
+  /// with isAvailableLocally = false so they appear as placeholders in the gallery.
+  Future<void> _mergeSupabaseVlogs() async {
+    final userId = _userId;
+    if (userId == null) return;
+    try {
+      final rows = await _supabaseRepo.fetchVlogMetadata(userId);
+      final merged = Map<String, Vlog>.from(state.vlogs);
+      for (final row in rows) {
+        final id = row['id'] as String;
+        if (!merged.containsKey(id)) {
+          merged[id] = Vlog.fromSupabaseRow(row);
+        }
+      }
+      state = state.copyWith(vlogs: merged);
+      debugPrint('☁️ Merged ${rows.length} Supabase vlog records');
+    } catch (e) {
+      debugPrint('⚠️ Supabase vlog merge failed: $e');
     }
   }
 
@@ -250,7 +302,8 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
     ClipType clipType,
   ) async {
     final appDir = await getApplicationDocumentsDirectory();
-    final clipsDir = Directory('${appDir.path}/clips/$habitId');
+    final userId = _userId ?? 'unknown';
+    final clipsDir = Directory('${appDir.path}/clips/$userId/$habitId');
 
     if (!await clipsDir.exists()) {
       await clipsDir.create(recursive: true);
@@ -404,6 +457,18 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
     // Persist vlogs to disk
     await _saveVlogsIndex();
 
+    // Sync to Supabase (fire-and-forget)
+    final userId = _userId;
+    if (userId != null) {
+      final compiledLog = state.dailyLogs[logId]!;
+      _supabaseRepo.upsertVlog(vlog, userId).catchError((Object e) {
+        debugPrint('Supabase vlog sync failed: $e');
+      });
+      _supabaseRepo.upsertDailyLog(compiledLog, userId).catchError((Object e) {
+        debugPrint('Supabase daily log sync failed: $e');
+      });
+    }
+
     return vlog;
   }
 
@@ -429,13 +494,18 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
   Future<void> markVlogAsShared(String vlogId) async {
     final vlog = state.vlogs[vlogId];
     if (vlog != null) {
-      // Update state
       state = state.copyWith(
         vlogs: {...state.vlogs, vlogId: vlog.markAsShared()},
       );
-
-      // Persist the change
       await _saveVlogsIndex();
+
+      // Sync to Supabase (fire-and-forget)
+      final userId = _userId;
+      if (userId != null) {
+        _supabaseRepo.updateVlogShared(vlogId).catchError((Object e) {
+          debugPrint('Supabase vlog share sync failed: $e');
+        });
+      }
     }
   }
 

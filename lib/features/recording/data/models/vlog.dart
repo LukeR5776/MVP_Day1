@@ -14,6 +14,7 @@ class Vlog {
   final DateTime createdAt;
   final bool isShared;
   final DateTime? sharedAt;
+  final bool isAvailableLocally;
 
   const Vlog({
     required this.id,
@@ -28,6 +29,7 @@ class Vlog {
     required this.createdAt,
     this.isShared = false,
     this.sharedAt,
+    this.isAvailableLocally = true,
   });
 
   /// Create a new vlog
@@ -70,6 +72,7 @@ class Vlog {
     DateTime? createdAt,
     bool? isShared,
     DateTime? sharedAt,
+    bool? isAvailableLocally,
   }) {
     return Vlog(
       id: id ?? this.id,
@@ -84,6 +87,7 @@ class Vlog {
       createdAt: createdAt ?? this.createdAt,
       isShared: isShared ?? this.isShared,
       sharedAt: sharedAt ?? this.sharedAt,
+      isAvailableLocally: isAvailableLocally ?? this.isAvailableLocally,
     );
   }
 
@@ -128,6 +132,27 @@ class Vlog {
       sharedAt: json['sharedAt'] != null
           ? DateTime.parse(json['sharedAt'] as String)
           : null,
+    );
+  }
+
+  /// Create from a Supabase `vlogs` row (snake_case keys, no video path).
+  factory Vlog.fromSupabaseRow(Map<String, dynamic> row) {
+    return Vlog(
+      id: row['id'] as String,
+      habitId: row['habit_id'] as String,
+      habitName: row['habit_name'] as String,
+      dayNumber: row['day_number'] as int,
+      date: DateTime.parse(row['date'] as String),
+      videoPath: '',
+      thumbnailPath: null,
+      durationSeconds: row['duration_seconds'] as int,
+      fileSizeBytes: row['file_size_bytes'] as int,
+      createdAt: DateTime.parse(row['created_at'] as String),
+      isShared: row['is_shared'] as bool? ?? false,
+      sharedAt: row['shared_at'] != null
+          ? DateTime.parse(row['shared_at'] as String)
+          : null,
+      isAvailableLocally: false,
     );
   }
 

@@ -31,6 +31,7 @@ class _VlogPlayerScreenState extends ConsumerState<VlogPlayerScreen> {
   bool _isInitialized = false;
   bool _showControls = true;
   bool _isPlaying = false;
+  bool _videoUnavailable = false;
   Timer? _hideControlsTimer;
 
   @override
@@ -46,18 +47,15 @@ class _VlogPlayerScreenState extends ConsumerState<VlogPlayerScreen> {
       return;
     }
 
+    if (!vlog.isAvailableLocally) {
+      if (mounted) setState(() => _videoUnavailable = true);
+      return;
+    }
+
     final videoFile = File(vlog.videoPath);
     if (!await videoFile.exists()) {
       debugPrint('❌ Video file not found: ${vlog.videoPath}');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Video file not found'),
-            backgroundColor: AppColors.streakFire,
-          ),
-        );
-        context.pop();
-      }
+      if (mounted) setState(() => _videoUnavailable = true);
       return;
     }
 
@@ -286,6 +284,41 @@ class _VlogPlayerScreenState extends ConsumerState<VlogPlayerScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      );
+    }
+
+    if (_videoUnavailable) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.cloud_outlined, color: Colors.white54, size: 64),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'This vlog was recorded on another device.',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyDefault.copyWith(color: Colors.white70),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'The video is not available here.',
+                  style: AppTypography.bodySmall.copyWith(color: Colors.white38),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                TextButton(
+                  onPressed: () => context.pop(),
+                  child: Text(
+                    'Go Back',
+                    style: AppTypography.buttonText.copyWith(color: AppColors.primary),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );

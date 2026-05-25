@@ -464,14 +464,18 @@ class _CameraScreenState extends ConsumerState<CameraScreen>
     final updatedProgress = ref.read(gamificationProvider);
 
     // 1. Enhanced completion dialog (with XP popup)
+    // barrierDismissible: true so users can always escape even on small screens
+    // where the "Done" button might be below the fold.
     await showDialog<void>(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.backgroundCard,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
+        // contentPadding removes default bottom padding so actions sit flush
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -498,14 +502,17 @@ class _CameraScreenState extends ConsumerState<CameraScreen>
                 result: result,
                 updatedProgress: updatedProgress,
               ),
-              const SizedBox(height: AppSpacing.lg),
-              PrimaryButton(
-                text: 'Done',
-                onPressed: () => Navigator.of(ctx).pop(),
-              ),
             ],
           ),
         ),
+        // "Done" in actions so it's always visible below the scrollable content
+        actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        actions: [
+          PrimaryButton(
+            text: 'Done',
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+        ],
       ),
     );
 

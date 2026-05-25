@@ -12,18 +12,22 @@ final journeyViewModeProvider = StateProvider<JourneyViewMode>((ref) {
   return JourneyViewMode.grid;
 });
 
-/// Provider for all vlogs (main gallery)
-/// Watches repository state to rebuild when vlogs are added/removed
+/// Provider for all vlogs (main gallery) — only locally available vlogs.
+/// Remote-only vlogs (isAvailableLocally: false) are excluded so the gallery
+/// never shows "Other device" cards for the user's own device history.
 final allVlogsProvider = Provider<List<Vlog>>((ref) {
   final state = ref.watch(recordingRepositoryProvider);
-  return state.vlogs.values.toList()..sort((a, b) => b.date.compareTo(a.date));
+  return state.vlogs.values
+      .where((v) => v.isAvailableLocally)
+      .toList()
+    ..sort((a, b) => b.date.compareTo(a.date));
 });
 
-/// Provider for vlogs filtered by habit
+/// Provider for vlogs filtered by habit — only locally available vlogs.
 final habitVlogsProvider = Provider.family<List<Vlog>, String>((ref, habitId) {
   final state = ref.watch(recordingRepositoryProvider);
   return state.vlogs.values
-      .where((vlog) => vlog.habitId == habitId)
+      .where((vlog) => vlog.habitId == habitId && vlog.isAvailableLocally)
       .toList()
     ..sort((a, b) => b.date.compareTo(a.date));
 });

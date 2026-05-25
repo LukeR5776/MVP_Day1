@@ -21,6 +21,7 @@ dependencies:
   image_gallery_saver: ^2.0.3
   ffmpeg_kit_flutter_new: ^4.1.0  # Community-maintained FFmpeg for video compilation
   share_plus: ^7.2.1
+  supabase_flutter: ^2.5.0
 
 dev_dependencies:
   flutter_test:

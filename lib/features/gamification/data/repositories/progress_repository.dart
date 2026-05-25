@@ -8,14 +8,12 @@ import '../models/user_progress.dart';
 /// Pure I/O class — not a StateNotifier. The reactive state lives in
 /// [GamificationNotifier]. This class only handles reading/writing.
 class ProgressRepository {
-  static const _fileName = 'user_progress.json';
-
-  /// Load progress from disk. Returns a default [UserProgress] if no file exists.
-  Future<UserProgress> load() async {
+  /// Load progress from disk for a specific user. Returns default if no file exists.
+  Future<UserProgress> load(String userId) async {
     try {
-      final file = await _file();
+      final file = await _file(userId);
       if (!await file.exists()) {
-        debugPrint('📊 No progress file found — starting fresh');
+        debugPrint('📊 No progress file found for $userId — starting fresh');
         return const UserProgress();
       }
       final contents = await file.readAsString();
@@ -31,10 +29,10 @@ class ProgressRepository {
     }
   }
 
-  /// Save progress to disk.
-  Future<void> save(UserProgress progress) async {
+  /// Save progress to disk for a specific user.
+  Future<void> save(UserProgress progress, String userId) async {
     try {
-      final file = await _file();
+      final file = await _file(userId);
       await file.writeAsString(progress.toJsonString());
       debugPrint(
         '💾 Saved progress: level ${progress.level}, ${progress.totalXP} XP',
@@ -44,8 +42,8 @@ class ProgressRepository {
     }
   }
 
-  Future<File> _file() async {
+  Future<File> _file(String userId) async {
     final appDir = await getApplicationDocumentsDirectory();
-    return File('${appDir.path}/$_fileName');
+    return File('${appDir.path}/user_progress_$userId.json');
   }
 }

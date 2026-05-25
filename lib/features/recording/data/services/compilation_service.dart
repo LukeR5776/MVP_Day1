@@ -117,6 +117,9 @@ class CompilationService {
       final session = await FFmpegKit.execute(ffmpegCommand);
       final returnCode = await session.getReturnCode();
 
+      // Clear statistics callback to prevent stale callbacks on closed streams
+      FFmpegKitConfig.enableStatisticsCallback(null);
+
       // Clean up concat list file
       try {
         await concatFile.delete();
@@ -190,18 +193,18 @@ class CompilationService {
 
       onProgress(0.9, 'Saving to camera roll...');
 
-      // Save the compiled video to camera roll
-      try {
-        final result = await ImageGallerySaver.saveFile(
-          outputPath,
-          isReturnPathOfIOS: true,
-          name: 'Day${dailyLog.dayNumber}_${habitName.replaceAll(' ', '_')}',
-        );
-        debugPrint('✅ Saved to camera roll: $result');
-      } catch (e) {
-        debugPrint('⚠️ Could not save to camera roll: $e');
-        // Don't throw - camera roll save is optional
-      }
+      // Save the compiled video to camera roll — fire-and-forget.
+      // Awaiting triggers the iOS PHPhotoLibrary permission dialog which puts
+      // the app inactive, disposing the camera controller mid-compilation.
+      ImageGallerySaver.saveFile(
+        outputPath,
+        isReturnPathOfIOS: true,
+        name: 'Day${dailyLog.dayNumber}_${habitName.replaceAll(' ', '_')}',
+      ).then((result) {
+        debugPrint('✅ Compiled vlog saved to camera roll: $result');
+      }).catchError((Object e) {
+        debugPrint('⚠️ Could not save compiled vlog to camera roll: $e');
+      });
 
       // Get actual duration from the compiled video file using FFprobe
       final actualDuration = await _getActualVideoDuration(outputPath);

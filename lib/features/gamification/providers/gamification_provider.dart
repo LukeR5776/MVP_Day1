@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/models/user_progress.dart';
 import '../data/models/achievement.dart';
 import '../data/repositories/progress_repository.dart';
+import '../data/repositories/supabase_progress_repository.dart';
 import '../../habits/data/models/habit.dart';
 import '../../habits/providers/habits_provider.dart';
 import '../../recording/data/repositories/recording_repository.dart';
@@ -39,13 +43,53 @@ class GamificationResult {
 class GamificationNotifier extends StateNotifier<UserProgress> {
   final Ref _ref;
   final ProgressRepository _repo = ProgressRepository();
+  final SupabaseProgressRepository _supabaseRepo = SupabaseProgressRepository();
+  late final StreamSubscription<AuthState> _authSub;
 
   GamificationNotifier(this._ref) : super(const UserProgress()) {
     _load();
+    // Reload from Supabase when user signs in (covers login after app launch).
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+      if (event.event == AuthChangeEvent.signedIn ||
+          event.event == AuthChangeEvent.tokenRefreshed) {
+        _load();
+      } else if (event.event == AuthChangeEvent.signedOut) {
+        state = const UserProgress();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
-    state = await _repo.load();
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) {
+      state = const UserProgress();
+      return;
+    }
+    // Show local data immediately, then fetch remote and sync if available.
+    state = await _repo.load(userId);
+    try {
+      final remote = await _supabaseRepo.fetch(userId);
+      if (remote != null) {
+        state = remote;
+        await _repo.save(remote, userId);
+      }
+    } catch (e) {
+      debugPrint('Supabase progress load failed: $e');
+    }
+  }
+
+  void _syncToSupabase(UserProgress progress) {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+    _supabaseRepo.upsert(progress, userId).catchError((Object e) {
+      debugPrint('Supabase progress sync failed: $e');
+    });
   }
 
   // ── XP for completing a vlog ───────────────────────────────────────────────
@@ -118,7 +162,9 @@ class GamificationNotifier extends StateNotifier<UserProgress> {
 
     // ── 9. Persist ────────────────────────────────────────────────────────
     state = next;
-    await _repo.save(state);
+    final saveUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (saveUserId != null) await _repo.save(state, saveUserId);
+    _syncToSupabase(state);
 
     return GamificationResult(
       xpAwarded: xpAwarded,
@@ -161,7 +207,9 @@ class GamificationNotifier extends StateNotifier<UserProgress> {
       state = next;
     }
 
-    await _repo.save(state);
+    final shareUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (shareUserId != null) await _repo.save(state, shareUserId);
+    _syncToSupabase(state);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

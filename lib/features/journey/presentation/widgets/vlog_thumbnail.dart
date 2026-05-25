@@ -55,8 +55,8 @@ class _VlogThumbnailState extends State<VlogThumbnail> {
               // Thumbnail image or placeholder
               _buildThumbnail(),
 
-              // Play button overlay
-              _buildPlayButton(),
+              // Play button overlay (hidden for unavailable vlogs)
+              if (widget.vlog.isAvailableLocally) _buildPlayButton(),
 
               // Day label (bottom left)
               if (widget.showDayLabel)
@@ -81,6 +81,7 @@ class _VlogThumbnailState extends State<VlogThumbnail> {
   }
 
   Widget _buildThumbnail() {
+    if (!widget.vlog.isAvailableLocally) return _buildUnavailablePlaceholder();
     if (widget.vlog.thumbnailPath != null) {
       final file = File(widget.vlog.thumbnailPath!);
       return FutureBuilder<bool>(
@@ -109,6 +110,26 @@ class _VlogThumbnailState extends State<VlogThumbnail> {
           color: AppColors.textTertiary,
           size: 32,
         ),
+      ),
+    );
+  }
+
+  Widget _buildUnavailablePlaceholder() {
+    return Container(
+      color: AppColors.backgroundSurface,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.cloud_outlined, color: AppColors.textTertiary, size: 28),
+          const SizedBox(height: 4),
+          Text(
+            'Other device',
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textTertiary,
+              fontSize: 9,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -237,22 +258,23 @@ class _VlogThumbnailLargeState extends State<VlogThumbnailLarge> {
                 ),
               ),
 
-              // Play button
-              Center(
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.backgroundPrimary.withValues(alpha: 0.75),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow_rounded,
-                    color: AppColors.textPrimary,
-                    size: 32,
+              // Play button (hidden for unavailable vlogs)
+              if (widget.vlog.isAvailableLocally)
+                Center(
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundPrimary.withValues(alpha: 0.75),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: AppColors.textPrimary,
+                      size: 32,
+                    ),
                   ),
                 ),
-              ),
 
               // Info at bottom
               Positioned(
@@ -308,6 +330,7 @@ class _VlogThumbnailLargeState extends State<VlogThumbnailLarge> {
   }
 
   Widget _buildThumbnail() {
+    if (!widget.vlog.isAvailableLocally) return _buildUnavailablePlaceholder();
     if (widget.vlog.thumbnailPath != null) {
       final file = File(widget.vlog.thumbnailPath!);
       return FutureBuilder<bool>(
@@ -336,6 +359,23 @@ class _VlogThumbnailLargeState extends State<VlogThumbnailLarge> {
           color: AppColors.textTertiary,
           size: 48,
         ),
+      ),
+    );
+  }
+
+  Widget _buildUnavailablePlaceholder() {
+    return Container(
+      color: AppColors.backgroundSurface,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.cloud_outlined, color: AppColors.textTertiary, size: 36),
+          const SizedBox(height: 6),
+          Text(
+            'Other device',
+            style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
+          ),
+        ],
       ),
     );
   }

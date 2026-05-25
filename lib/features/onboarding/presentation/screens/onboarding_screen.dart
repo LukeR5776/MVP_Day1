@@ -1,9 +1,12 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../data/repositories/onboarding_repository.dart';
+import '../../data/models/onboarding_data.dart';
+import '../../../auth/providers/auth_provider.dart';
 
 // Per-step background color palettes (list of colors used for blobs + waves)
 const _stepPalettes = <List<Color>>[
@@ -24,21 +27,20 @@ const _stepProgressColors = [
   Color(0xFFF59E0B),
 ];
 
-class OnboardingScreen extends StatefulWidget {
-  final VoidCallback onComplete;
-  const OnboardingScreen({super.key, required this.onComplete});
+class OnboardingScreen extends ConsumerStatefulWidget {
+  const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen>
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   int _step = 0;
   int _dir = 1;
   bool _animating = false;
 
-  // Answers
+  // Answers collected during onboarding
   String _name = '';
   String? _goal;
   final Set<String> _habits = {};
@@ -82,9 +84,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
   }
 
-  Future<void> _finish() async {
-    await OnboardingRepository().setComplete();
-    widget.onComplete();
+  void _goToSignUp() {
+    // Store in a Riverpod provider — GoRouter `extra` is dropped when the
+    // Supabase auth stream triggers a router refresh mid-navigation.
+    ref.read(pendingOnboardingDataProvider.notifier).state = OnboardingData(
+      name: _name,
+      goal: _goal,
+      habits: _habits.toList(),
+      frequency: _frequency,
+      timeOfDay: _timeOfDay,
+    ).toMap();
+    context.go('/signup');
   }
 
   @override
@@ -93,10 +103,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       backgroundColor: AppColors.backgroundPrimary,
       body: Stack(
         children: [
-          // Animated wave background
-          _AnimatedWaveBackground(step: _step),
+          AnimatedWaveBackground(step: _step),
 
-          // Content with slide transition
           AnimatedSlide(
             duration: const Duration(milliseconds: 280),
             curve: Curves.easeInOut,
@@ -107,11 +115,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: SafeArea(
                 child: Column(
                   children: [
-                    // Progress bar (steps 1–5)
                     if (_step > 0 && _step < _totalSteps - 1)
                       _buildProgressBar(),
-
-                    // Step content
                     Expanded(child: _buildStep()),
                   ],
                 ),
@@ -128,7 +133,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(
         children: [
-          // Back button
           GestureDetector(
             onTap: _back,
             child: Container(
@@ -142,7 +146,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ),
           ),
           const SizedBox(width: 12),
-          // Step dots
           Expanded(
             child: Row(
               children: List.generate(_totalSteps - 2, (i) {
@@ -216,7 +219,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           },
         );
       case 6:
-        return _StepCelebration(name: _name, onComplete: _finish);
+        return _StepCelebration(name: _name, onComplete: _goToSignUp);
       default:
         return const SizedBox();
     }
@@ -225,16 +228,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
 // ── Animated Wave Background ────────────────────────────────────────────────
 
-class _AnimatedWaveBackground extends StatefulWidget {
+class AnimatedWaveBackground extends StatefulWidget {
   final int step;
-  const _AnimatedWaveBackground({required this.step});
+  final List<Color>? customPalette;
+
+  const AnimatedWaveBackground({super.key, required this.step, this.customPalette});
 
   @override
-  State<_AnimatedWaveBackground> createState() =>
-      _AnimatedWaveBackgroundState();
+  State<AnimatedWaveBackground> createState() => _AnimatedWaveBackgroundState();
 }
 
-class _AnimatedWaveBackgroundState extends State<_AnimatedWaveBackground>
+class _AnimatedWaveBackgroundState extends State<AnimatedWaveBackground>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
 
@@ -255,7 +259,8 @@ class _AnimatedWaveBackgroundState extends State<_AnimatedWaveBackground>
 
   @override
   Widget build(BuildContext context) {
-    final palette = _stepPalettes[widget.step.clamp(0, _stepPalettes.length - 1)];
+    final palette = widget.customPalette ??
+        _stepPalettes[widget.step.clamp(0, _stepPalettes.length - 1)];
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (context, _) => CustomPaint(
@@ -274,13 +279,11 @@ class _WavePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Background
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, size.height),
       Paint()..color = AppColors.backgroundPrimary,
     );
 
-    // Animated blobs
     for (int i = 0; i < palette.length; i++) {
       final color = palette[i];
       final phase = i * pi * 0.7;
@@ -302,7 +305,6 @@ class _WavePainter extends CustomPainter {
       canvas.drawCircle(Offset(bx, by), r, paint);
     }
 
-    // Wave lines near the bottom
     for (int w = 0; w < 3; w++) {
       final color = palette[w % palette.length];
       final waveY = size.height * 0.72 + w * 28;
@@ -334,12 +336,13 @@ class _WavePainter extends CustomPainter {
 
 // ── Shared Widgets ──────────────────────────────────────────────────────────
 
-class _StepHeader extends StatelessWidget {
+class OnboardingStepHeader extends StatelessWidget {
   final String emoji;
   final String title;
   final String subtitle;
 
-  const _StepHeader({
+  const OnboardingStepHeader({
+    super.key,
     required this.emoji,
     required this.title,
     required this.subtitle,
@@ -367,6 +370,60 @@ class _StepHeader extends StatelessWidget {
     );
   }
 }
+
+// Private alias for internal use
+typedef _StepHeader = OnboardingStepHeader;
+
+class OnboardingCTAButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onTap;
+  final Color color;
+  final bool isLoading;
+
+  const OnboardingCTAButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+    required this.color,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null && !isLoading;
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 56,
+        decoration: BoxDecoration(
+          color: enabled ? color : color.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        alignment: Alignment.center,
+        child: isLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              )
+            : Text(
+                label,
+                style: AppTypography.buttonText.copyWith(
+                  color: Colors.white.withValues(alpha: enabled ? 1.0 : 0.5),
+                  letterSpacing: 0.01,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+// Private alias for internal use within this file
+typedef _CTAButton = OnboardingCTAButton;
 
 class _OptionCard extends StatelessWidget {
   final String emoji;
@@ -462,42 +519,6 @@ class _OptionCard extends StatelessWidget {
   }
 }
 
-class _CTAButton extends StatelessWidget {
-  final String label;
-  final VoidCallback? onTap;
-  final Color color;
-
-  const _CTAButton({
-    required this.label,
-    required this.onTap,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 56,
-        decoration: BoxDecoration(
-          color: enabled ? color : color.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: AppTypography.buttonText.copyWith(
-            color: Colors.white.withValues(alpha: enabled ? 1.0 : 0.5),
-            letterSpacing: 0.01,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ── Step 0: Splash ──────────────────────────────────────────────────────────
 
 class _StepSplash extends StatelessWidget {
@@ -518,7 +539,6 @@ class _StepSplash extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Logo
           RichText(
             text: TextSpan(
               children: [
@@ -561,7 +581,6 @@ class _StepSplash extends StatelessWidget {
               .fadeIn(duration: 500.ms),
           const SizedBox(height: 40),
 
-          // Habit pills
           Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -613,6 +632,29 @@ class _StepSplash extends StatelessWidget {
             ),
           )
               .animate(delay: 550.ms)
+              .fadeIn(duration: 400.ms),
+          const SizedBox(height: 24),
+          TextButton(
+            onPressed: () => context.go('/login'),
+            child: Text.rich(
+              TextSpan(
+                text: 'Already have an account? ',
+                style: AppTypography.caption.copyWith(
+                  color: Colors.white.withValues(alpha: 0.4),
+                ),
+                children: [
+                  TextSpan(
+                    text: 'Log in',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+              .animate(delay: 650.ms)
               .fadeIn(duration: 400.ms),
         ],
       ),
@@ -964,7 +1006,6 @@ class _StepCelebration extends StatelessWidget {
               .fadeIn(duration: 500.ms),
           const SizedBox(height: 20),
 
-          // Confetti emojis
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: ['⭐', '🎉', '✨', '🔥', '⭐']
@@ -984,7 +1025,7 @@ class _StepCelebration extends StatelessWidget {
           ),
           const SizedBox(height: 48),
           _CTAButton(
-            label: "Let's go 🚀",
+            label: "Create your account 🚀",
             onTap: onComplete,
             color: AppColors.primary,
           )

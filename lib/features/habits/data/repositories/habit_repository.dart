@@ -104,6 +104,14 @@ class HabitRepository {
     }
   }
 
+  /// Replace all habits from a remote source (e.g. Supabase load)
+  void replaceAll(List<Habit> habits) {
+    _habits
+      ..clear()
+      ..addAll(habits);
+    _notifyListeners();
+  }
+
   /// Export all habits as JSON
   String exportToJson() {
     return jsonEncode(_habits.map((h) => h.toJson()).toList());
