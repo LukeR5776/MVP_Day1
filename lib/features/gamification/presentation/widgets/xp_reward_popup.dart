@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -53,7 +54,7 @@ class XpRewardPopup extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('🔥', style: TextStyle(fontSize: 14)),
+              const Icon(LucideIcons.flame, size: 14, color: AppColors.streakFire),
               const SizedBox(width: 4),
               Text(
                 '${result.newStreak}-day streak  ·  ${_formatMultiplier(result.streakMultiplier)} bonus',

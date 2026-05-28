@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -30,6 +32,22 @@ class HabitCard extends StatefulWidget {
 
 class _HabitCardState extends State<HabitCard> {
   bool _isPressed = false;
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    // Tick every minute so countdown text stays current
+    _ticker = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,9 +101,10 @@ class _HabitCardState extends State<HabitCard> {
                           Expanded(
                             child: Row(
                               children: [
-                                Text(
-                                  widget.habit.category.emoji,
-                                  style: const TextStyle(fontSize: 20),
+                                Icon(
+                                  widget.habit.category.icon,
+                                  size: 20,
+                                  color: widget.habit.category.color,
                                 ),
                                 const SizedBox(width: AppSpacing.sm),
                                 Expanded(
@@ -144,6 +163,8 @@ class _HabitCardState extends State<HabitCard> {
                                         : AppColors.textSecondary,
                                   ),
                                 ),
+                                // Streak / reset indicator
+                                _buildTimingIndicator(),
                               ],
                             ),
                           ),
@@ -175,6 +196,74 @@ class _HabitCardState extends State<HabitCard> {
       case TodayStatus.notStarted:
         return 'Not started';
     }
+  }
+
+  Widget _buildTimingIndicator() {
+    final habit = widget.habit;
+
+    // Completed today — show reset countdown
+    if (widget.todayStatus == TodayStatus.completed) {
+      final mins = habit.minutesUntilDailyReset;
+      final hours = mins ~/ 60;
+      final label = hours > 0 ? 'Resets in ${hours}h' : 'Resets in ${mins}m';
+      return Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Text(
+          label,
+          style: AppTypography.caption.copyWith(
+            color: AppColors.textTertiary,
+            fontSize: 11,
+          ),
+        ),
+      );
+    }
+
+    // Streak at risk — show expiry warning when streak > 0 and not yet done today
+    final streakAtRisk = habit.currentStreak > 0 &&
+        widget.todayStatus != TodayStatus.completed;
+    if (streakAtRisk) {
+      final hours = habit.hoursUntilStreakExpires ?? habit.minutesUntilDailyReset ~/ 60;
+      Color warningColor;
+      IconData warningIcon;
+      String label;
+      if (hours == 0) {
+        warningColor = AppColors.streakFire;
+        warningIcon = LucideIcons.flame;
+        label = 'Streak expires < 1h!';
+      } else if (hours <= 3) {
+        warningColor = AppColors.streakFire;
+        warningIcon = LucideIcons.flame;
+        label = 'Streak expires in ${hours}h!';
+      } else if (hours <= 8) {
+        warningColor = AppColors.warning;
+        warningIcon = LucideIcons.zap;
+        label = 'Streak expires in ${hours}h';
+      } else {
+        warningColor = AppColors.xpGold;
+        warningIcon = LucideIcons.flame;
+        label = 'Complete today to keep streak';
+      }
+      return Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(warningIcon, size: 11, color: warningColor),
+            const SizedBox(width: 3),
+            Text(
+              label,
+              style: AppTypography.caption.copyWith(
+                color: warningColor,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 }
 

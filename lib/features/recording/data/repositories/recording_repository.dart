@@ -55,8 +55,11 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
       if (event.event == AuthChangeEvent.signedOut) {
         state = const RecordingRepositoryState();
-      } else if (event.event == AuthChangeEvent.signedIn ||
-          event.event == AuthChangeEvent.tokenRefreshed) {
+      } else if (event.event == AuthChangeEvent.signedIn) {
+        // Fresh sign-in: reset initialized flag so data loads for the new user
+        state = const RecordingRepositoryState();
+        initialize();
+      } else if (event.event == AuthChangeEvent.tokenRefreshed) {
         initialize();
       }
     });
@@ -70,7 +73,7 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
 
   String? get _userId => Supabase.instance.client.auth.currentUser?.id;
 
-  /// Initialize the repository - loads persisted vlogs from disk.
+  /// Initialize the repository - loads persisted vlogs and daily logs from disk.
   /// Supabase merge only runs when there are no local vlogs (fresh install /
   /// new device) to avoid flooding the gallery with stale "Other device" cards.
   Future<void> initialize() async {
@@ -78,12 +81,13 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
     // Require a signed-in user — avoids loading another user's files.
     if (_userId == null) return;
 
+    await _loadDailyLogsFromDisk();
     await _loadVlogsFromDisk();
     if (state.vlogs.isEmpty) {
       await _mergeSupabaseVlogs();
     }
     state = state.copyWith(isInitialized: true);
-    debugPrint('📦 RecordingRepository initialized with ${state.vlogs.length} vlogs');
+    debugPrint('📦 RecordingRepository initialized with ${state.vlogs.length} vlogs, ${state.dailyLogs.length} daily logs');
   }
 
   /// Ensure repository is initialized before operations
@@ -154,6 +158,53 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
       state = state.copyWith(vlogs: loadedVlogs);
     } catch (e) {
       debugPrint('❌ Error loading vlogs from disk: $e');
+    }
+  }
+
+  /// Save today's and yesterday's daily logs to disk for streak continuity across restarts.
+  Future<void> _saveDailyLogsIndex() async {
+    final userId = _userId;
+    if (userId == null) return;
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final indexFile = File('${appDir.path}/daily_logs_$userId.json');
+      final today = DateTime.now();
+      final todayStr = today.toIso8601String().split('T')[0];
+      final yesterdayStr = today.subtract(const Duration(days: 1)).toIso8601String().split('T')[0];
+      final relevantLogs = state.dailyLogs.entries
+          .where((e) => e.key.contains(todayStr) || e.key.contains(yesterdayStr))
+          .map((e) => e.value.toJson())
+          .toList();
+      await indexFile.writeAsString(jsonEncode(relevantLogs));
+      debugPrint('💾 Saved ${relevantLogs.length} daily logs to index');
+    } catch (e) {
+      debugPrint('❌ Error saving daily logs index: $e');
+    }
+  }
+
+  /// Load today's and yesterday's daily logs from disk on initialization.
+  Future<void> _loadDailyLogsFromDisk() async {
+    final userId = _userId;
+    if (userId == null) return;
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final indexFile = File('${appDir.path}/daily_logs_$userId.json');
+      if (!await indexFile.exists()) return;
+      final content = await indexFile.readAsString();
+      final List<dynamic> logsList = jsonDecode(content);
+      final Map<String, DailyLog> loadedLogs = {};
+      for (final json in logsList) {
+        try {
+          final log = DailyLog.fromJson(json as Map<String, dynamic>);
+          loadedLogs[log.id] = log;
+        } catch (e) {
+          debugPrint('⚠️ Error parsing daily log: $e');
+        }
+      }
+      state = state.copyWith(dailyLogs: loadedLogs);
+      debugPrint('📂 Loaded ${loadedLogs.length} daily logs from disk');
+    } catch (e) {
+      debugPrint('❌ Error loading daily logs from disk: $e');
     }
   }
 
@@ -263,6 +314,9 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
       dailyLogs: {...state.dailyLogs, log.id: updatedLog},
     );
 
+    // Persist so streak check survives app restarts
+    await _saveDailyLogsIndex();
+
     return updatedLog;
   }
 
@@ -370,7 +424,7 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
   }
 
   /// Mark a daily log as compiled
-  void markAsCompiled(String logId, String vlogPath, String? thumbnailPath) {
+  Future<void> markAsCompiled(String logId, String vlogPath, String? thumbnailPath) async {
     final log = state.dailyLogs[logId];
     if (log == null) return;
 
@@ -385,6 +439,9 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
     state = state.copyWith(
       dailyLogs: {...state.dailyLogs, logId: updatedLog},
     );
+
+    // Persist compiled status so streak check is correct on next launch
+    await _saveDailyLogsIndex();
   }
 
   /// Delete a daily log and all its clips
@@ -454,8 +511,9 @@ class RecordingRepository extends StateNotifier<RecordingRepositoryState> {
       },
     );
 
-    // Persist vlogs to disk
+    // Persist vlogs and compiled daily log to disk
     await _saveVlogsIndex();
+    await _saveDailyLogsIndex();
 
     // Sync to Supabase (fire-and-forget)
     final userId = _userId;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -81,8 +82,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final onboardingComplete = ref.watch(onboardingCompleteProvider);
-
     return Scaffold(
       backgroundColor: AppColors.backgroundPrimary,
       body: Stack(
@@ -126,7 +125,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 48),
 
                   const OnboardingStepHeader(
-                    emoji: '👋',
+                    icon: LucideIcons.hand,
                     title: 'Welcome back',
                     subtitle: 'Log in to continue your journey.',
                   ),
@@ -211,9 +210,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                   Center(
                     child: TextButton(
-                      onPressed: () => onboardingComplete
-                          ? context.go('/signup')
-                          : context.go('/onboarding'),
+                      onPressed: () => context.go('/onboarding'),
                       child: Text.rich(
                         TextSpan(
                           text: "Don't have an account? ",

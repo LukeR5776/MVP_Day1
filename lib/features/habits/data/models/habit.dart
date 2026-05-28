@@ -20,6 +20,7 @@ class Habit {
   final int bestStreak;
   final int totalDaysCompleted;
   final int currentDayNumber;
+  final DateTime? lastCompletedAt;
 
   const Habit({
     required this.id,
@@ -35,6 +36,7 @@ class Habit {
     this.bestStreak = 0,
     this.totalDaysCompleted = 0,
     this.currentDayNumber = 1,
+    this.lastCompletedAt,
   });
 
   /// Create a new habit with generated ID
@@ -64,6 +66,38 @@ class Habit {
   /// Get display string for day number
   String get dayDisplay => 'Day $currentDayNumber';
 
+  static DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+
+  /// True if user completed this habit today
+  bool get completedToday {
+    if (lastCompletedAt == null) return false;
+    return _dateOnly(lastCompletedAt!) == _dateOnly(DateTime.now());
+  }
+
+  /// True if streak > 0 and user hasn't completed today — streak will expire at midnight
+  bool get isStreakAtRisk {
+    if (currentStreak == 0 || lastCompletedAt == null) return false;
+    if (completedToday) return false;
+    final lastDate = _dateOnly(lastCompletedAt!);
+    final today = _dateOnly(DateTime.now());
+    return lastDate == today.subtract(const Duration(days: 1));
+  }
+
+  /// Hours remaining until streak expires (null if not at risk)
+  int? get hoursUntilStreakExpires {
+    if (!isStreakAtRisk) return null;
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day + 1);
+    return midnight.difference(now).inHours;
+  }
+
+  /// Minutes until habit resets for next day (for completed habits)
+  int get minutesUntilDailyReset {
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day + 1);
+    return midnight.difference(now).inMinutes;
+  }
+
   /// Copy with method for immutable updates
   Habit copyWith({
     String? id,
@@ -79,6 +113,7 @@ class Habit {
     int? bestStreak,
     int? totalDaysCompleted,
     int? currentDayNumber,
+    DateTime? lastCompletedAt,
   }) {
     return Habit(
       id: id ?? this.id,
@@ -94,6 +129,7 @@ class Habit {
       bestStreak: bestStreak ?? this.bestStreak,
       totalDaysCompleted: totalDaysCompleted ?? this.totalDaysCompleted,
       currentDayNumber: currentDayNumber ?? this.currentDayNumber,
+      lastCompletedAt: lastCompletedAt ?? this.lastCompletedAt,
     );
   }
 
@@ -114,6 +150,7 @@ class Habit {
       'bestStreak': bestStreak,
       'totalDaysCompleted': totalDaysCompleted,
       'currentDayNumber': currentDayNumber,
+      'lastCompletedAt': lastCompletedAt?.toIso8601String(),
     };
   }
 
@@ -144,6 +181,9 @@ class Habit {
       bestStreak: json['bestStreak'] as int? ?? 0,
       totalDaysCompleted: json['totalDaysCompleted'] as int? ?? 0,
       currentDayNumber: json['currentDayNumber'] as int? ?? 1,
+      lastCompletedAt: json['lastCompletedAt'] != null
+          ? DateTime.parse(json['lastCompletedAt'] as String)
+          : null,
     );
   }
 

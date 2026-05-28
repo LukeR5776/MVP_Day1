@@ -46,7 +46,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (!isLoggedIn && onboardingComplete) {
-        if (location != '/login' && location != '/signup') return '/login';
+        if (!authPages.contains(location)) return '/login';
         return null;
       }
 

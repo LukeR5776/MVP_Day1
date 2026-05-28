@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -20,13 +21,11 @@ class StreakCounter extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Fire emoji
-          Text(
-            '🔥',
-            style: TextStyle(
-              fontSize: isCompact ? 32 : 48,
-              height: 1.0,
-            ),
+          // Streak icon
+          Icon(
+            LucideIcons.flame,
+            size: isCompact ? 32 : 48,
+            color: AppColors.streakFire,
           ),
           const SizedBox(height: 4),
           // Streak number

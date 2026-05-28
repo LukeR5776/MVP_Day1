@@ -10,6 +10,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/widgets/buttons/primary_button.dart';
 import '../../providers/recording_provider.dart';
+import '../../data/models/daily_log.dart';
 import '../widgets/clip_progress_bar.dart';
 import '../widgets/day_overlay.dart';
 import '../widgets/record_button.dart';
@@ -95,6 +96,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen>
           );
     } catch (e) {
       debugPrint('❌ Session init error: $e');
+    }
+
+    // If all clips are already recorded (e.g. app crashed mid-compile),
+    // skip the camera and auto-compile immediately.
+    final session = ref.read(recordingSessionProvider);
+    if (session.dailyLog?.status == DailyLogStatus.clipsComplete) {
+      debugPrint('🎬 All clips present — resuming compilation automatically');
+      await _compileVlog();
+      return;
     }
 
     // Request permissions (shows native dialog if needed)

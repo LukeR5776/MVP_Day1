@@ -108,11 +108,20 @@ class GamificationNotifier extends StateNotifier<UserProgress> {
 
     // ── 1. Calculate new streak ────────────────────────────────────────────
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
-    final yesterdayKey =
-        '${habit.id}_${yesterday.toIso8601String().split('T')[0]}';
-    final yesterdayCompiled =
+    final yesterdayStr = yesterday.toIso8601String().split('T')[0];
+    final yesterdayKey = '${habit.id}_$yesterdayStr';
+
+    // Primary check: in-memory daily logs (accurate during same app session)
+    bool yesterdayCompiled =
         recordingState.dailyLogs[yesterdayKey]?.status ==
             DailyLogStatus.vlogCompiled;
+
+    // Fallback: use lastCompletedAt if daily logs were cleared (app restart)
+    // This prevents streak from falsely resetting to 1 after a restart.
+    if (!yesterdayCompiled && habit.lastCompletedAt != null) {
+      final lastDateStr = habit.lastCompletedAt!.toIso8601String().split('T')[0];
+      yesterdayCompiled = lastDateStr == yesterdayStr;
+    }
 
     final newStreak = yesterdayCompiled ? habit.currentStreak + 1 : 1;
 

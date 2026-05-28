@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../data/models/onboarding_data.dart';
@@ -337,13 +338,13 @@ class _WavePainter extends CustomPainter {
 // ── Shared Widgets ──────────────────────────────────────────────────────────
 
 class OnboardingStepHeader extends StatelessWidget {
-  final String emoji;
+  final IconData icon;
   final String title;
   final String subtitle;
 
   const OnboardingStepHeader({
     super.key,
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.subtitle,
   });
@@ -353,7 +354,7 @@ class OnboardingStepHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 36)),
+        Icon(icon, size: 36, color: Colors.white),
         const SizedBox(height: 12),
         Text(
           title,
@@ -426,7 +427,7 @@ class OnboardingCTAButton extends StatelessWidget {
 typedef _CTAButton = OnboardingCTAButton;
 
 class _OptionCard extends StatelessWidget {
-  final String emoji;
+  final IconData icon;
   final String label;
   final String desc;
   final Color color;
@@ -435,7 +436,7 @@ class _OptionCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _OptionCard({
-    required this.emoji,
+    required this.icon,
     required this.label,
     required this.desc,
     required this.color,
@@ -470,7 +471,7 @@ class _OptionCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 24)),
+            Icon(icon, size: 24, color: color),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -527,11 +528,11 @@ class _StepSplash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pills = [
-      ('💪', 'Build strength', AppColors.physical),
-      ('🧠', 'Clear mind', AppColors.mental),
-      ('🎨', 'Daily creativity', AppColors.creative),
-      ('🌱', 'Keep growing', AppColors.growth),
+    const pills = [
+      (LucideIcons.dumbbell, 'Build strength', AppColors.physical),
+      (LucideIcons.brain, 'Clear mind', AppColors.mental),
+      (LucideIcons.palette, 'Daily creativity', AppColors.creative),
+      (LucideIcons.sprout, 'Keep growing', AppColors.growth),
     ];
 
     return Padding(
@@ -586,7 +587,7 @@ class _StepSplash extends StatelessWidget {
             runSpacing: 10,
             alignment: WrapAlignment.center,
             children: pills.map((p) {
-              final (emoji, label, color) = p;
+              final (icon, label, color) = p;
               return Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -598,7 +599,7 @@ class _StepSplash extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(emoji, style: const TextStyle(fontSize: 16)),
+                    Icon(icon, size: 16, color: color),
                     const SizedBox(width: 7),
                     Text(
                       label,
@@ -685,7 +686,7 @@ class _StepName extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _StepHeader(
-            emoji: '👋',
+            icon: LucideIcons.hand,
             title: "What should we\ncall you?",
             subtitle: "We'll personalize your journey.",
           ),
@@ -750,10 +751,10 @@ class _StepGoal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const options = [
-      ('fitness', '💪', 'Get fit & strong', 'Build physical habits that last', AppColors.physical),
-      ('mind', '🧠', 'Mental clarity', 'Reduce stress, sharpen focus', AppColors.mental),
-      ('creative', '🎨', 'Express creatively', 'Make art, music, or writing daily', AppColors.creative),
-      ('growth', '🌱', 'Personal growth', 'Learn, level up, become better', AppColors.growth),
+      ('fitness', LucideIcons.dumbbell, 'Get fit & strong', 'Build physical habits that last', AppColors.physical),
+      ('mind', LucideIcons.brain, 'Mental clarity', 'Reduce stress, sharpen focus', AppColors.mental),
+      ('creative', LucideIcons.palette, 'Express creatively', 'Make art, music, or writing daily', AppColors.creative),
+      ('growth', LucideIcons.sprout, 'Personal growth', 'Learn, level up, become better', AppColors.growth),
     ];
 
     return Padding(
@@ -762,7 +763,7 @@ class _StepGoal extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _StepHeader(
-            emoji: '🎯',
+            icon: LucideIcons.target,
             title: "What's your\nmain goal?",
             subtitle: 'Pick one — you can add more later.',
           ),
@@ -773,7 +774,7 @@ class _StepGoal extends StatelessWidget {
                   .map((o) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _OptionCard(
-                          emoji: o.$2,
+                          icon: o.$2,
                           label: o.$3,
                           desc: o.$4,
                           color: o.$5,
@@ -808,10 +809,10 @@ class _StepHabits extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const options = [
-      ('physical', '💪', 'Physical', 'Exercise, cold showers, running…', AppColors.physical),
-      ('mental', '🧠', 'Mental', 'Meditation, journaling, reading…', AppColors.mental),
-      ('creative', '🎨', 'Creative', 'Drawing, music, writing, art…', AppColors.creative),
-      ('growth', '🌱', 'Growth', 'Language, skills, networking…', AppColors.growth),
+      ('physical', LucideIcons.dumbbell, 'Physical', 'Exercise, cold showers, running…', AppColors.physical),
+      ('mental', LucideIcons.brain, 'Mental', 'Meditation, journaling, reading…', AppColors.mental),
+      ('creative', LucideIcons.palette, 'Creative', 'Drawing, music, writing, art…', AppColors.creative),
+      ('growth', LucideIcons.sprout, 'Growth', 'Language, skills, networking…', AppColors.growth),
     ];
 
     return Padding(
@@ -820,7 +821,7 @@ class _StepHabits extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _StepHeader(
-            emoji: '✨',
+            icon: LucideIcons.sparkles,
             title: 'Which habits\nwill you build?',
             subtitle: 'Select all that apply.',
           ),
@@ -831,7 +832,7 @@ class _StepHabits extends StatelessWidget {
                   .map((o) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _OptionCard(
-                          emoji: o.$2,
+                          icon: o.$2,
                           label: o.$3,
                           desc: o.$4,
                           color: o.$5,
@@ -868,9 +869,9 @@ class _StepFrequency extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const options = [
-      ('3', '📅', '3× / week', 'Light start', AppColors.growth),
-      ('5', '📆', '5× / week', 'Steady pace', AppColors.primary),
-      ('7', '🗓️', 'Every day', 'Full commitment', AppColors.mental),
+      ('3', LucideIcons.calendar, '3× / week', 'Light start', AppColors.growth),
+      ('5', LucideIcons.calendar, '5× / week', 'Steady pace', AppColors.primary),
+      ('7', LucideIcons.calendar, 'Every day', 'Full commitment', AppColors.mental),
     ];
 
     return Padding(
@@ -879,7 +880,7 @@ class _StepFrequency extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _StepHeader(
-            emoji: '📅',
+            icon: LucideIcons.calendar,
             title: 'How often do you\nwant to show up?',
             subtitle: 'Consistency beats intensity.',
           ),
@@ -890,7 +891,7 @@ class _StepFrequency extends StatelessWidget {
                   .map((o) => Padding(
                         padding: const EdgeInsets.only(bottom: 14),
                         child: _OptionCard(
-                          emoji: o.$2,
+                          icon: o.$2,
                           label: o.$3,
                           desc: o.$4,
                           color: o.$5,
@@ -918,9 +919,9 @@ class _StepTime extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const options = [
-      ('morning', '🌅', 'Morning', 'Rise and grind, 5–9 AM', AppColors.xpGold),
-      ('afternoon', '☀️', 'Afternoon', 'Midday momentum, 12–5 PM', AppColors.creative),
-      ('evening', '🌙', 'Evening', 'Wind-down ritual, 6–10 PM', AppColors.mental),
+      ('morning', LucideIcons.sunrise, 'Morning', 'Rise and grind, 5–9 AM', AppColors.xpGold),
+      ('afternoon', LucideIcons.sun, 'Afternoon', 'Midday momentum, 12–5 PM', AppColors.creative),
+      ('evening', LucideIcons.moon, 'Evening', 'Wind-down ritual, 6–10 PM', AppColors.mental),
     ];
 
     return Padding(
@@ -929,7 +930,7 @@ class _StepTime extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _StepHeader(
-            emoji: '⏰',
+            icon: LucideIcons.clock,
             title: 'When do you\ndo your best work?',
             subtitle: "We'll remind you at the right time.",
           ),
@@ -940,7 +941,7 @@ class _StepTime extends StatelessWidget {
                   .map((o) => Padding(
                         padding: const EdgeInsets.only(bottom: 14),
                         child: _OptionCard(
-                          emoji: o.$2,
+                          icon: o.$2,
                           label: o.$3,
                           desc: o.$4,
                           color: o.$5,
@@ -974,7 +975,7 @@ class _StepCelebration extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('🎉', style: TextStyle(fontSize: 72))
+          const Icon(LucideIcons.partyPopper, size: 72, color: Colors.white)
               .animate()
               .scale(
                 duration: 600.ms,
@@ -1008,15 +1009,18 @@ class _StepCelebration extends StatelessWidget {
 
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: ['⭐', '🎉', '✨', '🔥', '⭐']
+            children: [
+              LucideIcons.star,
+              LucideIcons.partyPopper,
+              LucideIcons.sparkles,
+              LucideIcons.flame,
+              LucideIcons.star,
+            ]
                 .asMap()
                 .entries
                 .map((e) => Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Text(
-                        e.value,
-                        style: const TextStyle(fontSize: 22),
-                      )
+                      child: Icon(e.value, size: 22, color: Colors.white)
                           .animate(delay: Duration(milliseconds: 500 + e.key * 80))
                           .fadeIn(duration: 400.ms)
                           .slideY(begin: 0.4, end: 0),
@@ -1025,7 +1029,7 @@ class _StepCelebration extends StatelessWidget {
           ),
           const SizedBox(height: 48),
           _CTAButton(
-            label: "Create your account 🚀",
+            label: "Create your account",
             onTap: onComplete,
             color: AppColors.primary,
           )

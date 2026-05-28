@@ -9,6 +9,8 @@ import '../../../../shared/widgets/buttons/primary_button.dart';
 import '../../../../shared/widgets/cards/base_card.dart';
 import '../../data/models/habit.dart';
 import '../../providers/habits_provider.dart';
+import '../../../recording/providers/recording_provider.dart';
+import '../../../recording/data/models/daily_log.dart';
 
 /// Screen showing habit details and stats
 class HabitDetailScreen extends ConsumerWidget {
@@ -19,9 +21,18 @@ class HabitDetailScreen extends ConsumerWidget {
     required this.habitId,
   });
 
+  void _navigateToCamera(BuildContext context, Habit habit) {
+    context.push('/camera/${habit.id}', extra: {
+      'habitName': habit.name,
+      'dayNumber': habit.currentDayNumber,
+      'habitColor': habit.category.color,
+    });
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final habit = ref.watch(habitByIdProvider(habitId));
+    final todayLog = ref.watch(todayLogProvider(habitId));
 
     if (habit == null) {
       return Scaffold(
@@ -165,11 +176,7 @@ class HabitDetailScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                PrimaryButton(
-                  text: 'Record Today\'s Clip',
-                  icon: Icons.videocam,
-                  onPressed: () => context.go('/record'),
-                ),
+                _buildRecordButton(context, habit, todayLog),
                 const SizedBox(height: AppSpacing.sm),
                 _SecondaryButton(
                   text: 'View Journey',
@@ -224,6 +231,51 @@ class HabitDetailScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildRecordButton(BuildContext context, Habit habit, DailyLog? todayLog) {
+    final status = todayLog?.status ?? DailyLogStatus.notStarted;
+    switch (status) {
+      case DailyLogStatus.vlogCompiled:
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+          decoration: BoxDecoration(
+            color: AppColors.success.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
+            border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Day ${habit.currentDayNumber - 1} Complete ✓',
+                style: AppTypography.buttonText.copyWith(color: AppColors.success),
+              ),
+            ],
+          ),
+        );
+      case DailyLogStatus.clipsComplete:
+        return PrimaryButton(
+          text: 'Compile Vlog (All Clips Ready)',
+          icon: Icons.movie_creation,
+          onPressed: () => _navigateToCamera(context, habit),
+        );
+      case DailyLogStatus.inProgress:
+        return PrimaryButton(
+          text: 'Continue Recording (${todayLog!.clipCount}/3)',
+          icon: Icons.videocam,
+          onPressed: () => _navigateToCamera(context, habit),
+        );
+      case DailyLogStatus.notStarted:
+        return PrimaryButton(
+          text: 'Record Today\'s Vlog',
+          icon: Icons.videocam,
+          onPressed: () => _navigateToCamera(context, habit),
+        );
+    }
   }
 
   Widget _buildStatsGrid(Habit habit) {

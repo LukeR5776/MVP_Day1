@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -176,10 +177,7 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              '🎯',
-              style: TextStyle(fontSize: 64),
-            ),
+            const Icon(LucideIcons.target, size: 64, color: AppColors.textSecondary),
             const SizedBox(height: AppSpacing.lg),
             Text(
               'Focus is your superpower',
@@ -246,9 +244,10 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      category.emoji,
-                      style: const TextStyle(fontSize: 16),
+                    Icon(
+                      category.icon,
+                      size: 16,
+                      color: category.color,
                     ),
                     const SizedBox(width: 4),
                     Text(

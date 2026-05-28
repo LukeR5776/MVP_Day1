@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -278,7 +279,7 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
                       border: Border.all(color: AppColors.streakFire.withValues(alpha: 0.2)),
                     ),
                     child: Row(children: [
-                      const Text('🔥', style: TextStyle(fontSize: 14)),
+                      const Icon(LucideIcons.flame, size: 14, color: AppColors.streakFire),
                       const SizedBox(width: 5),
                       Text('$bestStreak', style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, color: AppColors.streakFire)),
                     ]),
@@ -415,7 +416,7 @@ class _PathTabState extends ConsumerState<_PathTab> {
                           border: Border.all(color: sel ? h.category.color.withValues(alpha: 0.4) : AppColors.borderSubtle),
                         ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Text(h.category.emoji, style: const TextStyle(fontSize: 14)),
+                          Icon(h.category.icon, size: 14, color: h.category.color),
                           const SizedBox(width: 6),
                           Text(h.name, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600, color: sel ? h.category.color : AppColors.textSecondary)),
                         ]),
@@ -481,7 +482,7 @@ class _PathTabState extends ConsumerState<_PathTab> {
       top: item.y - 44,
       left: left,
       right: right,
-      child: const Text('🔥', style: TextStyle(fontSize: 36))
+      child: const Icon(LucideIcons.flame, size: 36, color: AppColors.streakFire)
           .animate(onPlay: (c) => c.repeat(reverse: true))
           .scaleXY(begin: 1.0, end: 1.12, duration: 1200.ms, curve: Curves.easeInOut),
     );
@@ -645,7 +646,7 @@ class _PathNodeWidget extends StatelessWidget {
                     if (isDone) Icon(Icons.check_rounded, color: Colors.white, size: size * 0.4),
                     if (isCurrent) Icon(Icons.play_arrow_rounded, color: Colors.white, size: size * 0.42),
                     if (isLocked) Icon(Icons.lock_outline_rounded, color: Colors.white.withValues(alpha: 0.35), size: size * 0.34),
-                    if (node.isMilestone) Text('🏆', style: TextStyle(fontSize: size * 0.4, color: isLocked ? null : null)),
+                    if (node.isMilestone) Icon(LucideIcons.trophy, size: size * 0.4, color: Colors.white),
                   ]),
                 ),
               ],
@@ -713,7 +714,7 @@ class _NodePopup extends StatelessWidget {
     final isLocked = node.type == _NodeType.locked;
     final isDone = node.type == _NodeType.done || (node.isMilestone && node.type == _NodeType.done);
     final isCurrent = node.type == _NodeType.current;
-    final ctaLabel = isLocked ? '🔒  Not yet unlocked' : isDone ? '▶  Watch Vlog' : '🎬  Record Now';
+    final ctaLabel = isLocked ? 'Not yet unlocked' : isDone ? 'Watch Vlog' : 'Record Now';
 
     return GestureDetector(
       onTap: onClose,
@@ -740,8 +741,10 @@ class _NodePopup extends StatelessWidget {
                       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(node.isMilestone ? '🏆' : 'DAY ${node.day}',
-                                style: node.isMilestone ? const TextStyle(fontSize: 52) : const TextStyle(fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -0.96, color: AppColors.textPrimary, height: 1)),
+                            node.isMilestone
+                                ? const Icon(LucideIcons.trophy, size: 52, color: AppColors.xpGold)
+                                : Text('DAY ${node.day}',
+                                    style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -0.96, color: AppColors.textPrimary, height: 1)),
                             const SizedBox(height: 4),
                             Text(item.section.title.split('—').last.trim(), style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
                           ]),
@@ -756,17 +759,21 @@ class _NodePopup extends StatelessWidget {
                         width: double.infinity, padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(color: AppColors.backgroundSurface, borderRadius: BorderRadius.circular(12)),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(node.isMilestone ? '🏅 MILESTONE' : '📋 QUEST', style: AppTypography.caption.copyWith(color: item.section.color, letterSpacing: 0.1, fontWeight: FontWeight.w700)),
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(node.isMilestone ? LucideIcons.award : LucideIcons.clipboardList, size: 11, color: item.section.color),
+                            const SizedBox(width: 4),
+                            Text(node.isMilestone ? 'MILESTONE' : 'QUEST', style: AppTypography.caption.copyWith(color: item.section.color, letterSpacing: 0.1, fontWeight: FontWeight.w700)),
+                          ]),
                           const SizedBox(height: 6),
                           Text(node.quest, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.55)),
                         ]),
                       ),
                       const SizedBox(height: 12),
                       Row(children: [
-                        _RewardChip(emoji: '⚡', label: '+${node.xp} XP', color: AppColors.xpGold),
+                        _RewardChip(icon: LucideIcons.zap, label: '+${node.xp} XP', color: AppColors.xpGold),
                         const SizedBox(width: 8),
-                        _RewardChip(emoji: '🔥', label: 'Streak +1', color: AppColors.streakFire),
-                        if (node.isMilestone) ...[const SizedBox(width: 8), _RewardChip(emoji: '🏅', label: 'Badge', color: AppColors.levelPurple)],
+                        _RewardChip(icon: LucideIcons.flame, label: 'Streak +1', color: AppColors.streakFire),
+                        if (node.isMilestone) ...[const SizedBox(width: 8), _RewardChip(icon: LucideIcons.award, label: 'Badge', color: AppColors.levelPurple)],
                       ]),
                       const SizedBox(height: 18),
                       SizedBox(
@@ -796,8 +803,8 @@ class _NodePopup extends StatelessWidget {
 }
 
 class _RewardChip extends StatelessWidget {
-  final String emoji; final String label; final Color color;
-  const _RewardChip({required this.emoji, required this.label, required this.color});
+  final IconData icon; final String label; final Color color;
+  const _RewardChip({required this.icon, required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -805,7 +812,7 @@ class _RewardChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10), border: Border.all(color: color.withValues(alpha: 0.22))),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text(emoji, style: const TextStyle(fontSize: 14)),
+        Icon(icon, size: 14, color: color),
         const SizedBox(width: 6),
         Text(label, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, color: color)),
       ]),
@@ -821,7 +828,7 @@ class _EmptyPathState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Text('🗺️', style: TextStyle(fontSize: 64)),
+          const Icon(LucideIcons.map, size: 64, color: AppColors.textTertiary),
           const SizedBox(height: AppSpacing.lg),
           Text('No habits yet', style: AppTypography.h2.copyWith(color: AppColors.textPrimary)),
           const SizedBox(height: AppSpacing.sm),
@@ -845,7 +852,7 @@ class _GalleryTab extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Text('🎬', style: TextStyle(fontSize: 64)),
+            const Icon(LucideIcons.clapperboard, size: 64, color: AppColors.textTertiary),
             const SizedBox(height: AppSpacing.lg),
             Text('No vlogs yet', style: AppTypography.h2.copyWith(color: AppColors.textPrimary)),
             const SizedBox(height: AppSpacing.sm),

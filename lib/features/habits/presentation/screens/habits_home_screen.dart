@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../shared/widgets/indicators/xp_bar.dart';
 import '../../../../shared/widgets/cards/base_card.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -178,9 +179,10 @@ class HabitsHomeScreen extends ConsumerWidget {
                           color: AppColors.streakFire.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text(
-                          '🔥',
-                          style: TextStyle(fontSize: 24),
+                        child: const Icon(
+                          LucideIcons.flame,
+                          size: 24,
+                          color: AppColors.streakFire,
                         ),
                       ),
                       const SizedBox(width: AppSpacing.md),
@@ -222,9 +224,10 @@ class HabitsHomeScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          const Text(
-                            '⚡',
-                            style: TextStyle(fontSize: 16),
+                          const Icon(
+                            LucideIcons.zap,
+                            size: 16,
+                            color: AppColors.xpGold,
                           ),
                           const SizedBox(width: 4),
                           Text(

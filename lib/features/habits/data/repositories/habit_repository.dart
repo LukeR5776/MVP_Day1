@@ -78,6 +78,7 @@ class HabitRepository {
       update(habit.copyWith(
         currentStreak: newStreak,
         bestStreak: newStreak > habit.bestStreak ? newStreak : habit.bestStreak,
+        lastCompletedAt: DateTime.now(),
       ));
     }
   }

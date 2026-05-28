@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -79,7 +80,7 @@ class StatsScreen extends ConsumerWidget {
                       border: Border.all(color: AppColors.xpGold.withValues(alpha: 0.25)),
                     ),
                     child: Row(children: [
-                      const Text('⚡', style: TextStyle(fontSize: 14)),
+                      const Icon(LucideIcons.zap, size: 14, color: AppColors.xpGold),
                       const SizedBox(width: 5),
                       Text('${progress.totalXP} XP', style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, color: AppColors.xpGold)),
                     ]),
@@ -288,10 +289,10 @@ class StatsScreen extends ConsumerWidget {
                 crossAxisSpacing: 10,
                 childAspectRatio: 1.5,
                 children: [
-                  _TotalChip(emoji: '🎬', value: '${progress.totalVlogsCreated}', label: 'Total Vlogs', color: AppColors.primary),
-                  _TotalChip(emoji: '🔥', value: '${bestStreak}d', label: 'Best Streak', color: AppColors.streakFire),
-                  _TotalChip(emoji: '⚡', value: '${progress.totalXP}', label: 'Total XP', color: AppColors.xpGold),
-                  _TotalChip(emoji: '💪', value: '${habits.length}', label: 'Habits Active', color: AppColors.success),
+                  _TotalChip(icon: LucideIcons.clapperboard, value: '${progress.totalVlogsCreated}', label: 'Total Vlogs', color: AppColors.primary),
+                  _TotalChip(icon: LucideIcons.flame, value: '${bestStreak}d', label: 'Best Streak', color: AppColors.streakFire),
+                  _TotalChip(icon: LucideIcons.zap, value: '${progress.totalXP}', label: 'Total XP', color: AppColors.xpGold),
+                  _TotalChip(icon: LucideIcons.dumbbell, value: '${habits.length}', label: 'Habits Active', color: AppColors.success),
                 ],
               )
                   .animate(delay: 420.ms)
@@ -518,12 +519,12 @@ class _RadialPainter extends CustomPainter {
 // ── Total chip ──────────────────────────────────────────────────────────────
 
 class _TotalChip extends StatelessWidget {
-  final String emoji;
+  final IconData icon;
   final String value;
   final String label;
   final Color color;
 
-  const _TotalChip({required this.emoji, required this.value, required this.label, required this.color});
+  const _TotalChip({required this.icon, required this.value, required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -535,7 +536,7 @@ class _TotalChip extends StatelessWidget {
         border: Border.all(color: AppColors.borderSubtle),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-        Text(emoji, style: const TextStyle(fontSize: 22)),
+        Icon(icon, size: 22, color: color),
         const SizedBox(height: 6),
         Text(value, style: AppTypography.h3.copyWith(color: color, fontSize: 22)),
         const SizedBox(height: 4),

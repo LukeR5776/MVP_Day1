@@ -45,9 +45,10 @@ class _UnlockedContent extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              achievement.emoji,
-              style: const TextStyle(fontSize: 28),
+            Icon(
+              achievement.icon,
+              size: 28,
+              color: achievement.rarity.color,
             ),
             // XP badge
             Container(
@@ -94,17 +95,10 @@ class _LockedContent extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            ColorFiltered(
-              colorFilter: const ColorFilter.matrix(<double>[
-                0.2126, 0.7152, 0.0722, 0, 0,
-                0.2126, 0.7152, 0.0722, 0, 0,
-                0.2126, 0.7152, 0.0722, 0, 0,
-                0,      0,      0,      0.4, 0,
-              ]),
-              child: Text(
-                achievement.emoji,
-                style: const TextStyle(fontSize: 28),
-              ),
+            Icon(
+              achievement.icon,
+              size: 28,
+              color: AppColors.textTertiary,
             ),
             const Icon(
               Icons.lock_outline_rounded,

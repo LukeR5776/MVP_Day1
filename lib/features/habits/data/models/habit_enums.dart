@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Habit categories - The 4 Wins Framework
@@ -63,13 +64,13 @@ enum HabitCategory {
   IconData get icon {
     switch (this) {
       case HabitCategory.physical:
-        return Icons.fitness_center;
+        return LucideIcons.dumbbell;
       case HabitCategory.mental:
-        return Icons.psychology;
+        return LucideIcons.brain;
       case HabitCategory.creative:
-        return Icons.palette;
+        return LucideIcons.palette;
       case HabitCategory.growth:
-        return Icons.trending_up;
+        return LucideIcons.sprout;
     }
   }
 }

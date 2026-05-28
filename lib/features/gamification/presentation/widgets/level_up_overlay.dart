@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -37,21 +38,21 @@ class LevelUpOverlay extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Confetti emojis
+                  // Celebration icons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('⭐', style: TextStyle(fontSize: 24))
+                      const Icon(LucideIcons.star, size: 24, color: AppColors.xpGold)
                           .animate()
                           .fadeIn(delay: 200.ms)
                           .slideY(begin: -0.5, end: 0),
                       const SizedBox(width: 16),
-                      const Text('🎉', style: TextStyle(fontSize: 32))
+                      const Icon(LucideIcons.partyPopper, size: 32, color: Colors.white)
                           .animate()
                           .fadeIn(delay: 300.ms)
                           .slideY(begin: -0.5, end: 0),
                       const SizedBox(width: 16),
-                      const Text('✨', style: TextStyle(fontSize: 24))
+                      const Icon(LucideIcons.sparkles, size: 24, color: AppColors.levelPurple)
                           .animate()
                           .fadeIn(delay: 400.ms)
                           .slideY(begin: -0.5, end: 0),

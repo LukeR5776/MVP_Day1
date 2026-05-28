@@ -42,6 +42,7 @@ class SupabaseHabitRepository {
         'current_day_number': habit.currentDayNumber,
         'created_at': habit.createdAt.toIso8601String(),
         'archived_at': habit.archivedAt?.toIso8601String(),
+        'last_completed_at': habit.lastCompletedAt?.toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       };
 
@@ -61,6 +62,7 @@ class SupabaseHabitRepository {
       'currentDayNumber': r['current_day_number'],
       'createdAt': r['created_at'],
       'archivedAt': r['archived_at'],
+      'lastCompletedAt': r['last_completed_at'],
     };
     return Habit.fromJson(json);
   }

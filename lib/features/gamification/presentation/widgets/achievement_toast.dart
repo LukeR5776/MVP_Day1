@@ -83,10 +83,11 @@ class _AchievementToastState extends State<AchievementToast> {
               ),
               child: Row(
                 children: [
-                  // Emoji
-                  Text(
-                    widget.achievement.emoji,
-                    style: const TextStyle(fontSize: 32),
+                  // Icon
+                  Icon(
+                    widget.achievement.icon,
+                    size: 32,
+                    color: widget.achievement.rarity.color,
                   ),
                   const SizedBox(width: AppSpacing.md),
 

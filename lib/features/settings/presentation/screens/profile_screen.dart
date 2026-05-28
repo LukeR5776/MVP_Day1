@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../shared/widgets/layout/screen_scaffold.dart';
 import '../../../../shared/widgets/indicators/xp_bar.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -261,10 +262,10 @@ class _ProfileStatsGrid extends StatelessWidget {
       mainAxisSpacing: AppSpacing.sm,
       childAspectRatio: 1.6,
       children: [
-        _StatTile(label: 'Level', value: '$level', emoji: '⭐'),
-        _StatTile(label: 'Total XP', value: '$totalXP', emoji: '⚡'),
-        _StatTile(label: 'Best Streak', value: '${bestStreak}d', emoji: '🔥'),
-        _StatTile(label: 'Vlogs Made', value: '$totalVlogs', emoji: '🎬'),
+        _StatTile(label: 'Level', value: '$level', icon: LucideIcons.star),
+        _StatTile(label: 'Total XP', value: '$totalXP', icon: LucideIcons.zap),
+        _StatTile(label: 'Best Streak', value: '${bestStreak}d', icon: LucideIcons.flame),
+        _StatTile(label: 'Vlogs Made', value: '$totalVlogs', icon: LucideIcons.clapperboard),
       ],
     );
   }
@@ -273,12 +274,12 @@ class _ProfileStatsGrid extends StatelessWidget {
 class _StatTile extends StatelessWidget {
   final String label;
   final String value;
-  final String emoji;
+  final IconData icon;
 
   const _StatTile({
     required this.label,
     required this.value,
-    required this.emoji,
+    required this.icon,
   });
 
   @override
@@ -294,7 +295,7 @@ class _StatTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
+          Icon(icon, size: 20, color: AppColors.textSecondary),
           const SizedBox(height: 4),
           Text(
             value,

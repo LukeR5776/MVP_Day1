@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -420,9 +421,10 @@ class _HeroHeader extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                   ],
-                  Text(
-                    category.emoji,
-                    style: const TextStyle(fontSize: 14),
+                  Icon(
+                    category.icon,
+                    size: 14,
+                    color: category.color,
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -547,10 +549,7 @@ class _EmptyJourneyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              '🎬',
-              style: TextStyle(fontSize: 56),
-            ),
+            const Icon(LucideIcons.clapperboard, size: 56, color: AppColors.textTertiary),
             const SizedBox(height: AppSpacing.md),
             Text(
               'No vlogs yet',
